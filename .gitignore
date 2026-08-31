@@ -1,0 +1,9 @@
+# Датасет генерируется из data/seed.py и в репозиторий не коммитится.
+task/data/trades.csv
+
+task/mentor/
+
+# Python
+__pycache__/
+.env/
+.venv/
