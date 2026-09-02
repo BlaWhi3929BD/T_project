@@ -22,7 +22,6 @@
    # 2. Активация
    # Bash:
    source .venv/bin/activate
-   
    # Fish:
    # source .venv/bin/activate.fish
    
@@ -34,11 +33,15 @@
    ```
 ### Запуск:
    ```bash
+   # Bash:
+   source .venv/bin/activate
+   # Fish:
+   # source .venv/bin/activate.fish
+   
    cd solution/backend
    
    # Bash:
    PYTHONPATH=. uvicorn app.main:app --host 127.0.0.1 --port 8000
-
    # Fish:
    # env PYTHONPATH=. uvicorn app.main:app --host 127.0.0.1 --port 8000
    
@@ -64,7 +67,6 @@ API доступно по адресу `http://localhost:8000`.
 ```bash
   # Bash:
   source .venv/bin/activate
-  
   # Fish:
   # source .venv/bin/activate.fish
   
