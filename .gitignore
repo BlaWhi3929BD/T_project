@@ -36,6 +36,3 @@ yarn-error.log*
 .idea/
 *.swp
 *.swo
-
-# Игнорирование служебных файлов проекта
-CLAUDE.md

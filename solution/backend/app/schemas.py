@@ -1,17 +1,13 @@
 from datetime import datetime
-from typing import List, Optional
+from typing import List, Optional, Annotated
 from pydantic import BaseModel, Field, ConfigDict, BeforeValidator
-from typing_extensions import Annotated
 from decimal import Decimal
 
-# Валидатор для автоматической конвертации Decimal в строку
+# Валидатор для автоматической конвертации Decimal в строку (требование задания)
 def decimal_to_str(v: object) -> object:
-    if isinstance(v, Decimal):
-        return str(v)
-    return v
+    return str(v) if isinstance(v, Decimal) else v
 
-# Тип для полей, которые должны быть строками, но приходят как Decimal
-StrDecimal = Annotated[str, BeforeValidator(decimal_to_str)]
+StrField = Annotated[str, BeforeValidator(decimal_to_str)]
 
 class TradeBase(BaseModel):
     symbol: str
@@ -19,19 +15,17 @@ class TradeBase(BaseModel):
     side: str
     opened_at: datetime
     closed_at: datetime
-    qty: StrDecimal
-    entry_price: StrDecimal
-    exit_price: StrDecimal
-    fee: StrDecimal
-    pnl: StrDecimal
+    qty: StrField
+    entry_price: StrField
+    exit_price: StrField
+    fee: StrField
+    pnl: StrField
 
 class TradeCreate(TradeBase):
     pass
 
 class Trade(TradeBase):
     id: int
-    
-    # В Pydantic V2 используем from_attributes для работы с SQLAlchemy
     model_config = ConfigDict(from_attributes=True)
 
 class TradeListResponse(BaseModel):

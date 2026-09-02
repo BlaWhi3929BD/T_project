@@ -22,12 +22,11 @@ def create_trade(db: Session, trade: TradeCreate):
     db.refresh(db_trade)
     return db_trade
 
-def get_trades(db: Session, symbols=None, strategies=None, side=None, date_from=None, date_to=None, sort_by="closed_at", order="desc", page=1, page_size=50):
+def get_trades(db: Session, symbols=None, strategies=None, side=None, date_from=None, date_to=None, sort_by="closed_at", order="desc", page=1, page_size=50) -> Tuple[List[Trade], int]:
     query = db.query(Trade)
     if symbols: query = query.filter(Trade.symbol.in_(symbols))
     if strategies: query = query.filter(Trade.strategy.in_(strategies))
     if side: query = query.filter(Trade.side == side)
-    
     if date_from:
         dt_from_utc = ALMATY_TZ.localize(datetime(date_from.year, date_from.month, date_from.day, 0, 0, 0)).astimezone(pytz.utc)
         query = query.filter(Trade.closed_at >= dt_from_utc)
@@ -37,11 +36,8 @@ def get_trades(db: Session, symbols=None, strategies=None, side=None, date_from=
 
     total_trades = query.count()
     sort_column = getattr(Trade, sort_by, Trade.closed_at)
-    
-    if order == "asc":
-        query = query.order_by(asc(sort_column), asc(Trade.id))
-    else:
-        query = query.order_by(desc(sort_column), asc(Trade.id))
+    if order == "asc": query = query.order_by(asc(sort_column), asc(Trade.id))
+    else: query = query.order_by(desc(sort_column), asc(Trade.id))
     
     trades = query.offset((page - 1) * page_size).limit(page_size).all()
     return trades, total_trades
@@ -63,34 +59,22 @@ def get_trade_stats(db: Session, symbols=None, strategies=None, side=None, date_
         dt_to_utc = ALMATY_TZ.localize(datetime(date_to.year, date_to.month, date_to.day, 23, 59, 59, 999999)).astimezone(pytz.utc)
         query = query.filter(Trade.closed_at <= dt_to_utc)
 
-    # 1. SQL Агрегация
     stats = query.with_entities(
-        func.count(Trade.id),
-        func.sum(case((Trade.pnl > 0, 1), else_=0)),
-        func.sum(case((Trade.pnl < 0, 1), else_=0)),
-        func.sum(case((Trade.pnl == 0, 1), else_=0)),
-        func.sum(Trade.pnl),
-        func.sum(case((Trade.pnl > 0, Trade.pnl), else_=0)),
+        func.count(Trade.id), func.sum(case((Trade.pnl > 0, 1), else_=0)),
+        func.sum(case((Trade.pnl < 0, 1), else_=0)), func.sum(case((Trade.pnl == 0, 1), else_=0)),
+        func.sum(Trade.pnl), func.sum(case((Trade.pnl > 0, Trade.pnl), else_=0)),
         func.sum(case((Trade.pnl < 0, func.abs(Trade.pnl)), else_=0)),
-        func.max(Trade.pnl),
-        func.min(Trade.pnl)
+        func.max(Trade.pnl), func.min(Trade.pnl)
     ).first()
 
     trades_count, wins, losses, breakeven, net_pnl, gross_profit, gross_loss, best, worst = stats
     if not trades_count:
-        return {
-            "trades_count": 0, "wins": 0, "losses": 0, "breakeven": 0,
-            "net_pnl": "0.00", "gross_profit": "0.00", "gross_loss": "0.00",
-            "win_rate": None, "profit_factor": None, "avg_win": None, "avg_loss": None,
-            "best_trade": "0.00", "worst_trade": "0.00", "max_drawdown": "0.00", "equity_curve": []
-        }
+        return {"trades_count": 0, "wins": 0, "losses": 0, "breakeven": 0, "net_pnl": "0.00", "gross_profit": "0.00", "gross_loss": "0.00", "win_rate": None, "profit_factor": None, "avg_win": None, "avg_loss": None, "best_trade": "0.00", "worst_trade": "0.00", "max_drawdown": "0.00", "equity_curve": []}
 
-    # 2. Pandas для Equity Curve (очень быстро)
     trades_raw = query.with_entities(Trade.pnl, Trade.closed_at).all()
     df = pd.DataFrame(trades_raw, columns=['pnl', 'closed_at'])
     df['closed_at'] = pd.to_datetime(df['closed_at']).dt.tz_localize('UTC').dt.tz_convert('Asia/Almaty')
     df['date'] = df['closed_at'].dt.date
-    
     daily = df.groupby('date')['pnl'].apply(lambda x: x.apply(Decimal).sum()).sort_index()
     full_range = pd.date_range(start=daily.index.min(), end=daily.index.max(), freq='D').date
     daily = daily.reindex(full_range, fill_value=Decimal('0.00'))
@@ -105,12 +89,7 @@ def get_trade_stats(db: Session, symbols=None, strategies=None, side=None, date_
         if current_cum_pnl > peak_pnl: peak_pnl = current_cum_pnl
         drawdown = peak_pnl - current_cum_pnl
         if drawdown > max_drawdown: max_drawdown = drawdown
-            
-        equity_curve_data.append({
-            "date": day.isoformat(),
-            "day_pnl": str(pnl.quantize(Decimal('0.01'), rounding=ROUND_HALF_UP)),
-            "cum_pnl": str(current_cum_pnl.quantize(Decimal('0.01'), rounding=ROUND_HALF_UP))
-        })
+        equity_curve_data.append({"date": day.isoformat(), "day_pnl": str(pnl.quantize(Decimal('0.01'), ROUND_HALF_UP)), "cum_pnl": str(current_cum_pnl.quantize(Decimal('0.01'), ROUND_HALF_UP))})
 
     return {
         "trades_count": trades_count,
@@ -118,7 +97,7 @@ def get_trade_stats(db: Session, symbols=None, strategies=None, side=None, date_
         "net_pnl": str(Decimal(str(net_pnl or 0)).quantize(Decimal('0.01'), ROUND_HALF_UP)),
         "gross_profit": str(Decimal(str(gross_profit or 0)).quantize(Decimal('0.01'), ROUND_HALF_UP)),
         "gross_loss": str(Decimal(str(gross_loss or 0)).quantize(Decimal('0.01'), ROUND_HALF_UP)),
-        "win_rate": round(wins / trades_count, 4),
+        "win_rate": round(wins / trades_count, 4) if trades_count else None,
         "profit_factor": round(float(gross_profit) / float(gross_loss), 4) if gross_loss and gross_loss > 0 else None,
         "avg_win": str((Decimal(str(gross_profit)) / wins).quantize(Decimal('0.01'), ROUND_HALF_UP)) if wins else None,
         "avg_loss": str(((-Decimal(str(gross_loss))) / losses).quantize(Decimal('0.01'), ROUND_HALF_UP)) if losses else None,
