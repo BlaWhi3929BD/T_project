@@ -1,25 +1,35 @@
+# Иерархия проекта
+
+Этот документ описывает структуру файлов и папок проекта.
+
+## Структура
+
+```text
 solution/
-├── backend/                # Бэкенд на FastAPI
-│   ├── app/
-│   │   ├── api/            # Эндпоинты
-│   │   ├── core/           # Конфигурация и расчеты (PnL, MDD)
-│   │   ├── db/             # Модели и подключение к БД
-│   │   ├── schemas/        # Pydantic схемы (DTO)
-│   │   └── main.py         # Точка входа
-│   ├── tests/              # Автотесты
-│   ├── scripts/            # Скрипты загрузки данных
-│   └── requirements.txt
-├── frontend/               # Фронтенд на Vite + React + TS
-│   ├── src/
-│   │   ├── api/            # Клиент для запросов
-│   │   ├── components/     # UI компоненты (Фильтры, Таблица, График)
-│   │   ├── hooks/          # Кастомные хуки для логики и URL
-│   │   ├── types/          # TS интерфейсы
-│   │   ├── utils/          # Форматирование денег и дат
-│   │   ├── App.tsx
-│   │   └── main.tsx
-│   ├── package.json
-│   └── tsconfig.json
-├── DECISIONS.md            # Журнал решений
-├── README.md               # Инструкция по запуску
-└── docker-compose.yml      # Для быстрого поднятия БД
+├── backend/                # Серверная часть (FastAPI)
+│   ├── app/                # Основное приложение
+│   │   ├── main.py         # Эндпоинты API
+│   │   ├── database.py     # Конфигурация БД (SQLite)
+│   │   ├── models.py       # SQL-модели (SQLAlchemy)
+│   │   ├── schemas.py      # Pydantic-схемы (типы API)
+│   │   └── crud.py         # Бизнес-логика и запросы к БД
+│   ├── scripts/            # Вспомогательные скрипты
+│   │   └── seed_db.py      # Загрузка CSV в БД
+│   ├── tests/              # Тесты
+│   │   └── test_api.py     # Тесты эндпоинтов
+│   └── requirements.txt    # Зависимости Python
+│
+├── frontend/               # Клиентская часть (React + Vite)
+│   ├── src/                # Исходный код
+│   │   ├── components/     # UI-компоненты
+│   │   ├── hooks/          # Логика состояния
+│   │   ├── services/       # API-сервисы
+│   │   └── types/          # TypeScript-типы
+│   ├── index.html          # Точка входа HTML
+│   ├── package.json        # Зависимости JS
+│   ├── tsconfig.json       # Конфигурация TypeScript
+│   └── vite.config.ts      # Конфигурация Vite
+│
+├── README.md               # Инструкции по запуску
+└── DECISIONS.md            # Журнал технических решений
+```

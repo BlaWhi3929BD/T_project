@@ -1,9 +1,8 @@
+
 fastapi
 uvicorn
 sqlalchemy
-psycopg2-binary
 pydantic
-pydantic-settings
-python-multipart
-pytest
-httpx
+pandas
+pytz
+python-multipart # для FastAPI, хотя напрямую не используется в нашем случае

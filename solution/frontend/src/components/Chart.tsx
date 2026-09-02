@@ -1,1 +1,0 @@
-// Equity curve chart component
