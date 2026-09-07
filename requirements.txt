@@ -1,0 +1,8 @@
+
+fastapi
+uvicorn
+sqlalchemy
+pydantic
+pandas
+pytz
+python-multipart # для FastAPI, хотя напрямую не используется в нашем случае
