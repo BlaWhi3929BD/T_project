@@ -7,7 +7,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import { DashboardFilters } from '../types/api';
 
-const DEFAULT_FILTERS: DashboardFilters = {
+export const DEFAULT_FILTERS: DashboardFilters = {
   symbols: [],
   strategies: [],
   side: '',
