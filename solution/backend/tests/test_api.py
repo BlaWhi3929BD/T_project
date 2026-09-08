@@ -124,3 +124,13 @@ def test_get_stats_max_drawdown_calculation(client):
 def test_get_stats_profit_factor_and_win_rate(client):
     data = client.get("/api/stats").json()
     assert data["win_rate"] is not None
+
+def test_health_endpoint(client):
+    response = client.get("/health")
+    assert response.status_code == 200
+    assert response.json() == {"status": "ok"}
+
+def test_ready_endpoint(client):
+    response = client.get("/ready")
+    assert response.status_code == 200
+

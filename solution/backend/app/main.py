@@ -1,7 +1,8 @@
 from typing import List, Optional
 from datetime import date
-from fastapi import FastAPI, Depends, Query
+from fastapi import FastAPI, Depends, Query, status, HTTPException
 from sqlalchemy.orm import Session
+from sqlalchemy import text
 from contextlib import asynccontextmanager
 
 from app.database import create_db_and_tables, get_db
@@ -29,6 +30,31 @@ async def read_root():
     Корневой эндпоинт, возвращающий приветственное сообщение.
     """
     return {"message": "Welcome to the Trades Dashboard API!"}
+
+@app.get("/health", status_code=200)
+async def health():
+    """
+    Эндпоинт проверки жизнеспособности (liveness probe).
+    Возвращает 200 {"status":"ok"}, к базе данных не обращается.
+    """
+    return {"status": "ok"}
+
+@app.get("/ready", status_code=200)
+async def ready(db: Session = Depends(get_db)):
+    """
+    Эндпоинт проверки готовности (readiness probe).
+    Проверяет доступность базы данных через SELECT 1.
+    Возвращает 200 при успехе, иначе 503 Service Unavailable.
+    """
+    try:
+        db.execute(text("SELECT 1"))
+        return {"status": "ready"}
+    except Exception as e:
+        raise HTTPException(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            detail=f"Database unreachable: {e}"
+        )
+
 
 @app.get("/api/filters/options", response_model=schemas.FilterOptions)
 async def get_filters_options(db: Session = Depends(get_db)):
