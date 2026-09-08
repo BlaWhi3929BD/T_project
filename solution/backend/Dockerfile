@@ -29,6 +29,8 @@ RUN chown -R appuser:appgroup /app
 # Стадия тестирования: запуск pytest внутри контейнера (docker build --target test .)
 FROM base AS test
 COPY tests ./tests
+# Установка pytest для прогона тестов
+RUN pip install --no-cache-dir pytest
 USER appuser
 CMD ["pytest", "tests/"]
 
@@ -42,3 +44,4 @@ HEALTHCHECK --interval=10s --timeout=3s --start-period=5s --retries=3 \
   CMD curl -f http://localhost:8000/health || exit 1
 
 CMD ["uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8000"]
+
