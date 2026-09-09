@@ -82,8 +82,58 @@ npm run dev
 
 ## 2. Развёртывание через Docker Compose (Рекомендуется)
 
-### Предварительные требования
-Установленные **Docker** и **Docker Compose (v2+)**.
+### Предварительные требования и установка Docker
+
+Для развёртывания проекта необходимы **Docker** и **Docker Compose (v2+)**.
+
+<details>
+<summary><b>Гайд по установке Docker и Docker Compose</b></summary>
+
+#### Debian-based (Ubuntu / Debian / Linux Mint)
+```bash
+# 1. Установка пакетов Docker и плагина Docker Compose:
+sudo apt-get update
+sudo apt-get install -y docker.io docker-compose-v2
+
+# 2. Запуск службы и добавление текущего пользователя в группу docker:
+sudo systemctl enable --now docker
+sudo usermod -aG docker $USER
+newgrp docker
+```
+
+#### Fedora-based (Fedora / RHEL / CentOS)
+```bash
+# 1. Установка Docker Engine и Compose плагина:
+sudo dnf install -y docker docker-compose-plugin
+
+# 2. Запуск службы и добавление пользователя в группу docker:
+sudo systemctl enable --now docker
+sudo usermod -aG docker $USER
+newgrp docker
+```
+
+#### Arch-based (Arch Linux / Manjaro / EndeavourOS)
+```bash
+# 1. Установка пакетов из официальных репозиториев:
+sudo pacman -S --noconfirm docker docker-compose
+
+# 2. Запуск службы и добавление пользователя в группу docker:
+sudo systemctl enable --now docker
+sudo usermod -aG docker $USER
+newgrp docker
+```
+
+#### Windows
+1. Скачайте и установите [Docker Desktop for Windows](https://docs.docker.com/desktop/setup/install/windows-install/).
+2. В процессе установки убедитесь, что выбрана опция **Use WSL 2 instead of Hyper-V** (рекомендуется).
+3. Перезагрузите компьютер и запустите Docker Desktop.
+
+#### Проверка установки:
+```bash
+docker --version
+docker compose version
+```
+</details>
 
 ### Первый запуск (с нуля)
 1. Скопируйте файл с переменными окружения:
