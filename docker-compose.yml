@@ -1,5 +1,3 @@
-version: "3.8"
-
 services:
   postgres:
     image: postgres:16-alpine
@@ -7,25 +5,40 @@ services:
     restart: unless-stopped
     environment:
       POSTGRES_DB: ${POSTGRES_DB:-trades_db}
-      POSTGRES_USER: ${POSTGRES_USER:-trades_user}
-      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-secure_password_example_123}
+      POSTGRES_USER: ${POSTGRES_USER:-user}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-123}
     volumes:
       - postgres_data:/var/lib/postgresql/data
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-trades_user} -d ${POSTGRES_DB:-trades_db}"]
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-user} -d ${POSTGRES_DB:-trades_db}"]
       interval: 5s
       timeout: 5s
       retries: 5
       start_period: 3s
 
+  backend-test:
+    build:
+      context: solution/backend
+      dockerfile: Dockerfile
+      target: test
+    volumes:
+      - ./task/data:/app/task/data
+    environment:
+      DATABASE_URL: ${DATABASE_URL:-postgresql://user:123@postgres:5432/trades_db}
+    depends_on:
+      postgres:
+        condition: service_healthy
+
   # Инициализация базы данных: выполняется один раз при первом запуске
   db-seed:
+    volumes:
+        - ./task/data:/app/task/data
     build:
       context: ./solution/backend
       dockerfile: Dockerfile
     container_name: trades-db-seed
     environment:
-      DATABASE_URL: ${DATABASE_URL:-postgresql://trades_user:secure_password_example_123@postgres:5432/trades_db}
+      DATABASE_URL: ${DATABASE_URL:-postgresql://user:123@postgres:5432/trades_db}
     # Используем --if-empty для того, чтобы при повторном запуске данные не перезаписывались и не стирались
     command: python scripts/seed_db.py --if-empty
     depends_on:
@@ -39,7 +52,7 @@ services:
     container_name: trades-backend
     restart: unless-stopped
     environment:
-      DATABASE_URL: ${DATABASE_URL:-postgresql://trades_user:secure_password_example_123@postgres:5432/trades_db}
+      DATABASE_URL: ${DATABASE_URL:-postgresql://user:123@postgres:5432/trades_db}
     depends_on:
       postgres:
         condition: service_healthy
