@@ -13,7 +13,7 @@
 ### Настройка
 ```bash
   # 0. Клонировать репозиторий:
-   git clone -b feature/trades-dashboard --single-branch https://github.com/BlaWhi3929BD/T_project.git
+   git clone -b main --single-branch https://github.com/BlaWhi3929BD/T_project.git
    cd ~/T_project
    
   # 1. Создать виртуальное окружение:
