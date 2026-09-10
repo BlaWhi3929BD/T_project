@@ -18,11 +18,9 @@ services:
 
   backend-test:
     build:
-      context: solution/backend
-      dockerfile: Dockerfile
+      context: .
+      dockerfile: solution/backend/Dockerfile
       target: test
-    volumes:
-      - ./task/data:/app/task/data
     environment:
       DATABASE_URL: ${DATABASE_URL:-postgresql://user:123@postgres:5432/trades_db}
     depends_on:
@@ -31,11 +29,9 @@ services:
 
   # Инициализация базы данных: выполняется один раз при первом запуске
   db-seed:
-    volumes:
-        - ./task/data:/app/task/data
     build:
-      context: ./solution/backend
-      dockerfile: Dockerfile
+      context: .
+      dockerfile: solution/backend/Dockerfile
     container_name: trades-db-seed
     environment:
       DATABASE_URL: ${DATABASE_URL:-postgresql://user:123@postgres:5432/trades_db}
@@ -47,8 +43,8 @@ services:
 
   backend:
     build:
-      context: ./solution/backend
-      dockerfile: Dockerfile
+      context: .
+      dockerfile: solution/backend/Dockerfile
     container_name: trades-backend
     restart: unless-stopped
     environment:

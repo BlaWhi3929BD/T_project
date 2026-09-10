@@ -17,19 +17,19 @@ RUN groupadd -g 10001 appgroup && \
     useradd -u 10001 -g appgroup -s /bin/sh appuser
 
 # Установка зависимостей Python
-COPY requirements.txt .
+COPY solution/backend/requirements.txt ./requirements.txt
 RUN pip install --no-cache-dir -r requirements.txt
 
-# Копирование исходного кода бэкенда и скриптов
-COPY app ./app
-COPY scripts ./scripts
+# Копирование исходного кода бэкенда, скриптов и данных (trades.csv)
+COPY solution/backend/app ./app
+COPY solution/backend/scripts ./scripts
+COPY task/data/trades.csv ./task/data/trades.csv
 
 RUN chown -R appuser:appgroup /app
 
-# Стадия тестирования: запуск pytest внутри контейнера (docker build --target test .)
+# Стадия тестирования: запуск pytest внутри контейнера
 FROM base AS test
-COPY tests ./tests
-# Установка pytest для прогона тестов
+COPY solution/backend/tests ./tests
 RUN pip install --no-cache-dir pytest httpx
 USER appuser
 CMD ["pytest", "tests/"]

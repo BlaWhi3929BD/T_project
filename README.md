@@ -292,7 +292,7 @@ minikube tunnel
 1. Сделайте образы бэкенда и фронтенда доступными для кластера:
    ```bash
    # Для minikube (загрузка локально собранных образов):
-   docker build -t trades-backend:latest -f solution/backend/Dockerfile solution/backend
+   docker build -t trades-backend:latest -f solution/backend/Dockerfile .
    docker build -t trades-frontend:latest -f solution/frontend/Dockerfile solution/frontend
    minikube image load trades-backend:latest
    minikube image load trades-frontend:latest
