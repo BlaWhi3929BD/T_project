@@ -1,0 +1,12 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: app-config
+  namespace: trades-dashboard
+  labels:
+    app.kubernetes.io/name: trades-dashboard
+    app.kubernetes.io/component: backend
+data:
+  APP_ENV: "production"
+  PYTHONUNBUFFERED: "1"
+  PYTHONDONTWRITEBYTECODE: "1"
