@@ -60,7 +60,7 @@ PYTHONPATH=solution/backend .venv/bin/uvicorn app.main:app --host 127.0.0.1 --po
 
 # Windows (PowerShell / CMD):
 # set PYTHONPATH=solution/backend
-# venv/bin/uvicorn app.main:app --host 127.0.0.1 --port 8000
+# .venv/bin/uvicorn app.main:app --host 127.0.0.1 --port 8000
 ```
 API доступно по адресу `http://localhost:8000`. Документация Swagger — `http://localhost:8000/docs`.
 
