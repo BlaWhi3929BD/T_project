@@ -199,7 +199,66 @@ docker compose down -v
 ## 3. Развёртывание в Kubernetes (minikube + kustomize)
 
 ### Предварительные требования и подготовка кластера
-Необходим запущенный **minikube** (или **kind**) и утилита **kubectl**.
+Необходимы запущенные **minikube** (или **kind**) и утилита **kubectl**.
+
+<details>
+<summary><b>Гайд по установке Kubernetes (minikube и kubectl)</b></summary>
+
+#### Debian-based (Ubuntu / Debian / Linux Mint)
+```bash
+# 1. Установка kubectl (официальный бинарник):
+sudo apt-get update && sudo apt-get install -y apt-transport-https ca-certificates curl
+curl -fsSL https://pkgs.k8s.io/core:/stable:/v1.31/deb/Release.key | sudo gpg --dearmor -o /etc/apt/keyrings/kubernetes-apt-keyring.gpg
+sudo chmod 644 /etc/apt/keyrings/kubernetes-apt-keyring.gpg
+echo 'deb [signed-by=/etc/apt/keyrings/kubernetes-apt-keyring.gpg] https://pkgs.k8s.io/core:/stable:/v1.31/deb/ /' | sudo tee /etc/apt/sources.list.dir/kubernetes.list
+sudo chmod 644 /etc/apt/sources.list.dir/kubernetes.list
+sudo apt-get update && sudo apt-get install -y kubectl
+
+# 2. Установка minikube:
+curl -LO https://storage.googleapis.com/minikube/releases/latest/minikube-linux-amd64
+sudo install minikube-linux-amd64 /usr/local/bin/minikube && rm minikube-linux-amd64
+```
+
+#### Fedora-based (Fedora / RHEL / CentOS)
+```bash
+# 1. Установка kubectl:
+cat <<EOF | sudo tee /etc/yum.repos.d/kubernetes.repo
+[kubernetes]
+name=Kubernetes
+baseurl=https://pkgs.k8s.io/core:/stable:/v1.31/rpm/
+enabled=1
+gpgcheck=1
+gpgkey=https://pkgs.k8s.io/core:/stable:/v1.31/rpm/repodata/repomd.xml.key
+EOF
+sudo dnf install -y kubectl
+
+# 2. Установка minikube:
+curl -LO https://storage.googleapis.com/minikube/releases/latest/minikube-linux-amd64
+sudo install minikube-linux-amd64 /usr/local/bin/minikube && rm minikube-linux-amd64
+```
+
+#### Arch-based (Arch Linux / Manjaro)
+```bash
+# 1. Установка kubectl и minikube:
+sudo pacman -S --noconfirm kubectl minikube
+```
+
+#### Windows
+1. **Через winget (рекомендуется):**
+   ```powershell
+   winget install -e --id Kubernetes.kubectl
+   winget install -e --id Kubernetes.minikube
+   ```
+2. **Либо вручную:**
+   - Скачайте и запустите [установщик minikube для Windows](https://storage.googleapis.com/minikube/releases/latest/minikube-installer.exe).
+   - Скачайте [kubectl.exe](https://dl.k8s.io/release/v1.31.0/bin/windows/amd64/kubectl.exe) и добавьте путь к файлу в системную переменную `PATH`.
+
+#### Проверка установки:
+```bash
+kubectl version --client
+minikube version
+```
+</details>
 
 <details>
 <summary><b>Инструкция по настройке кластера и Ingress в minikube</b></summary>
