@@ -1,0 +1,18 @@
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+
+namespace: trades-dashboard
+
+resources:
+  - namespace.yaml
+  - postgres-secret.yaml
+  - configmap.yaml
+  - postgres.yaml
+  - backend.yaml
+  - frontend.yaml
+  - db-seed-job.yaml
+  - ingress.yaml
+
+# Стандартные лейблы для всех генерируемых ресурсов
+commonLabels:
+  app.kubernetes.io/name: trades-dashboard
