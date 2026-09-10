@@ -185,7 +185,6 @@ docker compose down -v
 ```
 
 ---
-
 ## Тестирование локально (без Docker)
 
 Для запуска автотестов на бэкенде:
@@ -195,9 +194,88 @@ docker compose down -v
 
 ```
 
+---
+
+## 3. Развёртывание в Kubernetes (minikube + kustomize)
+
+### Предварительные требования и подготовка кластера
+Необходим запущенный **minikube** (или **kind**) и утилита **kubectl**.
+
+<details>
+<summary><b>Инструкция по настройке кластера и Ingress в minikube</b></summary>
+
+#### 1. Запуск minikube с докер-драйвером:
+```bash
+minikube start --driver=docker
 ```
 
+#### 2. Включение Ingress-контроллера (NGINX Ingress):
+```bash
+minikube addons enable ingress
 ```
+
+#### 3. Настройка локального DNS для резолва `trades.local`:
+Добавьте IP-адрес вашего кластера в `/etc/hosts` (для Linux/macOS) или `C:\Windows\System32\drivers\etc\hosts` (для Windows):
+```text
+<IP-АДРЕС-КЛАСТЕРА> trades.local
+```
+*Узнать IP-адрес кластера можно командой `minikube ip`.*
+
+*(На macOS и Windows с docker-драйвером Ingress недоступен по прямому IP. Используйте туннель в отдельном терминале):*
+```bash
+minikube tunnel
+# И добавьте в hosts:
+# 127.0.0.1 trades.local
+```
+</details>
+
+### Деплой приложения одной командой
+1. Сделайте образы бэкенда и фронтенда доступными для кластера:
+   ```bash
+   # Для minikube (загрузка локально собранных образов):
+   docker build -t trades-backend:latest -f solution/backend/Dockerfile solution/backend
+   docker build -t trades-frontend:latest -f solution/frontend/Dockerfile solution/frontend
+   minikube image load trades-backend:latest
+   minikube image load trades-frontend:latest
+   ```
+2. Разверните все ресурсы одной командой через **Kustomize**:
+   ```bash
+   kubectl apply -k k8s/
+   ```
+   *Что происходит:* Создается пространство имен `trades-dashboard`, поднимается PostgreSQL (`StatefulSet` + PV), запускается Job `db-seed` (импортирует данные ровно один раз), стартуют поды бэкенда и фронтенда, а Ingress маршрутизирует трафик.
+
+### Проверка работоспособности в кластере
+```bash
+# Получить список всех ресурсов в пространстве имен
+kubectl get all -n trades-dashboard
+
+# Ожидаемый результат:
+# - Все поды в состоянии Running
+# - Job db-seed-xxxxx завершен со статусом Completed
+```
+После этого дашборд будет доступен по адресу: `http://trades.local` (с использованием `minikube tunnel` или напрямую по IP).
+
+### Обновление конфигурации
+Вы можете безопасно обновлять манифесты и делать повторный `apply`:
+```bash
+kubectl apply -k k8s/
+```
+*Загруженное количество сделок в БД не изменится, повторный сидинг Job производиться не будет.*
+
+### Масштабирование бэкенда
+Вы можете масштабировать бэкенд на несколько реплик:
+```bash
+kubectl scale deployment/backend --replicas=2 -n trades-dashboard
+```
+> **Почему это работает на PostgreSQL и не работало бы на SQLite?**
+> PostgreSQL является полноценной клиент-серверной СУБД, поддерживающей конкурентные транзакции и сетевой доступ. Несколько реплик бэкенда могут одновременно и безопасно общаться с одной базой данных. В случае с SQLite, файл базы данных блокировался бы на запись (`database is locked`), а совместный доступ подов к одному файлу через сетевые тома (типа NFS) привел бы к повреждению данных из-за отсутствия координации блокировок на уровне ОС.
+
+### Удаление всех ресурсов
+```bash
+kubectl delete -k k8s/
+```
+
+---
 
 ## Дополнительная документация
 Подробное обоснование всех принятых технических решений находится в файле `solution/DECISIONS.md`.
