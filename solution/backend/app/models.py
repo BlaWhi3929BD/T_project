@@ -13,8 +13,8 @@ class Trade(Base):
     symbol = Column(String, index=True) # Торговый символ (например, BTCUSDT)
     strategy = Column(String, index=True) # Используемая торговая стратегия
     side = Column(String, index=True) # Тип сделки (long/short)
-    opened_at = Column(DateTime) # Время открытия сделки (UTC)
-    closed_at = Column(DateTime, index=True) # Время закрытия сделки (UTC)
+    opened_at = Column(DateTime(timezone=True)) # Время открытия сделки (UTC)
+    closed_at = Column(DateTime(timezone=True), index=True) # Время закрытия сделки (UTC)
     qty = Column(Numeric(precision=18, scale=8)) # Количество актива
     entry_price = Column(Numeric(precision=18, scale=8)) # Цена входа в сделку
     exit_price = Column(Numeric(precision=18, scale=8)) # Цена выхода из сделки

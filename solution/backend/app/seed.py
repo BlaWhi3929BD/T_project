@@ -7,7 +7,7 @@ import csv
 import hashlib
 import os
 from contextlib import contextmanager
-from datetime import datetime
+from datetime import datetime, timezone
 from decimal import Decimal
 from pathlib import Path
 from typing import Iterator
@@ -29,7 +29,7 @@ def csv_path_from_environment() -> Path:
 
 def _parse_datetime(value: str) -> datetime:
     parsed = datetime.fromisoformat(value.replace("Z", "+00:00"))
-    return parsed.replace(tzinfo=None)
+    return parsed.astimezone(timezone.utc)
 
 
 def _read_rows(path: Path) -> list[dict[str, object]]:

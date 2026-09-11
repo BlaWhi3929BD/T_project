@@ -1,5 +1,6 @@
 from typing import List, Optional
 from datetime import date
+import logging
 from fastapi import FastAPI, Depends, Query, status, HTTPException
 from sqlalchemy.orm import Session
 from sqlalchemy import text
@@ -7,6 +8,8 @@ from contextlib import asynccontextmanager
 
 from app.database import create_db_and_tables, get_db
 from app import crud, schemas
+
+logger = logging.getLogger(__name__)
 
 # Используем Lifespan для управления жизненным циклом приложения
 @asynccontextmanager
@@ -25,14 +28,14 @@ app = FastAPI(
 )
 
 @app.get("/")
-async def read_root():
+def read_root():
     """
     Корневой эндпоинт, возвращающий приветственное сообщение.
     """
     return {"message": "Welcome to the Trades Dashboard API!"}
 
 @app.get("/health", status_code=200)
-async def health():
+def health():
     """
     Эндпоинт проверки жизнеспособности (liveness probe).
     Возвращает 200 {"status":"ok"}, к базе данных не обращается.
@@ -40,7 +43,7 @@ async def health():
     return {"status": "ok"}
 
 @app.get("/ready", status_code=200)
-async def ready(db: Session = Depends(get_db)):
+def ready(db: Session = Depends(get_db)):
     """
     Эндпоинт проверки готовности (readiness probe).
     Проверяет доступность базы данных через SELECT 1.
@@ -50,14 +53,15 @@ async def ready(db: Session = Depends(get_db)):
         db.execute(text("SELECT 1"))
         return {"status": "ready"}
     except Exception as e:
+        logger.exception("Database readiness check failed")
         raise HTTPException(
             status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
-            detail=f"Database unreachable: {e}"
-        )
+            detail="Database unreachable",
+        ) from e
 
 
 @app.get("/api/filters/options", response_model=schemas.FilterOptions)
-async def get_filters_options(db: Session = Depends(get_db)):
+def get_filters_options(db: Session = Depends(get_db)):
     """
     Возвращает список доступных символов и стратегий для фильтрации сделок.
     """
@@ -65,10 +69,10 @@ async def get_filters_options(db: Session = Depends(get_db)):
     return {"symbols": symbols, "strategies": strategies}
 
 @app.get("/api/trades", response_model=schemas.TradeListResponse)
-async def list_trades(
+def list_trades(
     db: Session = Depends(get_db),
-    symbol: Optional[List[str]] = Query(None, description="Фильтр по символу"),
-    strategy: Optional[List[str]] = Query(None, description="Фильтр по стратегии"),
+    symbol: Optional[List[str]] = Query(None, max_length=crud.MAX_FILTER_VALUES, description="Фильтр по символу"),
+    strategy: Optional[List[str]] = Query(None, max_length=crud.MAX_FILTER_VALUES, description="Фильтр по стратегии"),
     side: Optional[str] = Query(None, pattern="^(long|short)$", description="Фильтр по стороне сделки"),
     date_from: Optional[date] = Query(None, description="Фильтр по дате закрытия от"),
     date_to: Optional[date] = Query(None, description="Фильтр по дате закрытия до"),
@@ -80,6 +84,9 @@ async def list_trades(
     """
     Возвращает список торговых сделок с фильтрацией, сортировкой и пагинацией.
     """
+    if date_from and date_to and date_from > date_to:
+        raise HTTPException(status_code=422, detail="date_from must not be after date_to")
+
     trades, total_trades = crud.get_trades(
         db=db,
         symbols=symbol,
@@ -95,10 +102,10 @@ async def list_trades(
     return {"items": trades, "page": page, "page_size": page_size, "total": total_trades}
 
 @app.get("/api/stats", response_model=schemas.StatsResponse)
-async def get_trades_stats(
+def get_trades_stats(
     db: Session = Depends(get_db),
-    symbol: Optional[List[str]] = Query(None, description="Фильтр по символу"),
-    strategy: Optional[List[str]] = Query(None, description="Фильтр по стратегии"),
+    symbol: Optional[List[str]] = Query(None, max_length=crud.MAX_FILTER_VALUES, description="Фильтр по символу"),
+    strategy: Optional[List[str]] = Query(None, max_length=crud.MAX_FILTER_VALUES, description="Фильтр по стратегии"),
     side: Optional[str] = Query(None, pattern="^(long|short)$", description="Фильтр по стороне сделки"),
     date_from: Optional[date] = Query(None, description="Фильтр по дате закрытия от"),
     date_to: Optional[date] = Query(None, description="Фильтр по дате закрытия до"),
@@ -106,6 +113,9 @@ async def get_trades_stats(
     """
     Возвращает статистические данные по отфильтрованным сделкам.
     """
+    if date_from and date_to and date_from > date_to:
+        raise HTTPException(status_code=422, detail="date_from must not be after date_to")
+
     stats = crud.get_trade_stats(
         db=db,
         symbols=symbol,
