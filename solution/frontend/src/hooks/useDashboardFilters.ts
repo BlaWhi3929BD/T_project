@@ -19,6 +19,27 @@ export const DEFAULT_FILTERS: DashboardFilters = {
   pageSize: 50,
 };
 
+const SORT_VALUES = ['closed_at', 'pnl', 'symbol'] as const;
+const ORDER_VALUES = ['asc', 'desc'] as const;
+
+function oneOf<const T extends readonly string[]>(
+  value: string | null,
+  values: T,
+  fallback: T[number],
+): T[number] {
+  return value && (values as readonly string[]).includes(value)
+    ? (value as T[number])
+    : fallback;
+}
+
+function positiveInteger(value: string | null, fallback: number, maximum?: number): number {
+  const parsed = Number(value);
+  if (!Number.isInteger(parsed) || parsed < 1 || (maximum !== undefined && parsed > maximum)) {
+    return fallback;
+  }
+  return parsed;
+}
+
 /**
  * Хук для работы с фильтрами дашборда.
  * Читает начальное состояние из URL и обновляет URL при изменении состояния.
@@ -31,13 +52,13 @@ export function useDashboardFilters() {
     return {
       symbols: params.getAll('symbol'),
       strategies: params.getAll('strategy'),
-      side: (params.get('side') as 'long' | 'short' | '') || '',
+      side: oneOf(params.get('side'), ['', 'long', 'short'] as const, ''),
       dateFrom: params.get('date_from') || '',
       dateTo: params.get('date_to') || '',
-      sort: (params.get('sort') as any) || 'closed_at',
-      order: (params.get('order') as any) || 'desc',
-      page: parseInt(params.get('page') || '1', 10),
-      pageSize: parseInt(params.get('page_size') || '50', 10),
+      sort: oneOf(params.get('sort'), SORT_VALUES, 'closed_at'),
+      order: oneOf(params.get('order'), ORDER_VALUES, 'desc'),
+      page: positiveInteger(params.get('page'), 1),
+      pageSize: positiveInteger(params.get('page_size'), 50, 200),
     };
   });
 

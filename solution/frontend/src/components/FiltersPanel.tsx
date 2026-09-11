@@ -7,6 +7,10 @@
 import React from 'react';
 import { DashboardFilters, FilterOptions } from '../types/api';
 
+function parseSide(value: string): DashboardFilters['side'] {
+  return value === 'long' || value === 'short' ? value : '';
+}
+
 interface FiltersPanelProps {
   filters: DashboardFilters;
   options: FilterOptions;
@@ -60,7 +64,7 @@ export const FiltersPanel: React.FC<FiltersPanelProps> = ({ filters, options, on
           <label>Side</label>
           <select 
             value={filters.side} 
-            onChange={(e) => onFilterChange({ side: e.target.value as any })}
+            onChange={(e) => onFilterChange({ side: parseSide(e.target.value) })}
           >
             <option value="">All Sides</option>
             <option value="long">Long</option>
