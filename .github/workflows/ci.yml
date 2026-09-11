@@ -1,0 +1,105 @@
+name: CI
+
+on:
+  push:
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  backend:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Install backend dependencies
+        run: |
+          python -m pip install --upgrade pip
+          python -m pip install -r solution/backend/requirements.txt pytest httpx ruff
+
+      - name: Generate deterministic dataset
+        run: python task/data/seed.py
+
+      - name: Run Ruff checks
+        run: |
+          ruff check .
+          ruff format --check .
+
+      - name: Run backend tests
+        env:
+          PYTHONPATH: solution/backend
+          CSV_PATH: ${{ github.workspace }}/task/data/trades.csv
+        run: pytest -q solution/backend/tests
+
+  frontend:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: solution/frontend
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: npm
+          cache-dependency-path: solution/frontend/package-lock.json
+
+      - name: Install frontend dependencies
+        run: npm ci
+
+      - name: Run frontend lint
+        run: npm run lint
+
+      - name: Run frontend tests
+        run: npm test
+
+      - name: Build frontend
+        run: npm run build
+
+  containers:
+    runs-on: ubuntu-latest
+    needs:
+      - backend
+      - frontend
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Build backend image
+        run: docker build --tag trades-backend:${{ github.sha }} -f solution/backend/Dockerfile .
+
+      - name: Build frontend image
+        run: docker build --tag trades-frontend:${{ github.sha }} -f solution/frontend/Dockerfile solution/frontend
+
+      - name: Enforce image size limits
+        run: |
+          backend_size=$(docker image inspect trades-backend:${{ github.sha }} --format '{{.Size}}')
+          frontend_size=$(docker image inspect trades-frontend:${{ github.sha }} --format '{{.Size}}')
+          test "$backend_size" -le 524288000
+          test "$frontend_size" -le 62914560
+
+  manifests:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Render Kubernetes manifests
+        run: kubectl kustomize k8s/ > /tmp/trades-dashboard-manifests.yaml
+
+      - name: Check rendered resources
+        run: |
+          grep -q 'kind: StatefulSet' /tmp/trades-dashboard-manifests.yaml
+          grep -q 'kind: Deployment' /tmp/trades-dashboard-manifests.yaml
+          ! grep -q '^kind: Job$' /tmp/trades-dashboard-manifests.yaml
+          ! grep -q 'POSTGRES_PASSWORD: "123"' /tmp/trades-dashboard-manifests.yaml
