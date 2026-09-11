@@ -14,7 +14,6 @@ from app.main import app
 from app.database import Base, get_db
 from app.models import Trade
 from scripts.seed_db import seed_database
-import pytz
 
 # Настройка тестовой БД
 SQLALCHEMY_DATABASE_URL = "sqlite:///./test.db"
@@ -103,6 +102,21 @@ def test_list_trades_min_page_size(client):
 def test_list_trades_non_existent_symbol(client):
     assert client.get("/api/trades?symbol=INVALID").json()["total"] == 0
 
+def test_list_trades_money_fields_are_strings(client):
+    item = client.get("/api/trades?page_size=1").json()["items"][0]
+    for field in ("qty", "entry_price", "exit_price", "fee", "pnl"):
+        assert isinstance(item[field], str)
+
+def test_invalid_date_range_is_rejected(client):
+    response = client.get("/api/trades?date_from=2025-01-02&date_to=2025-01-01")
+    assert response.status_code == 422
+    response = client.get("/api/stats?date_from=2025-01-02&date_to=2025-01-01")
+    assert response.status_code == 422
+
+@pytest.mark.parametrize("query", ["page_size=0", "page_size=201", "side=invalid", "date_from=not-a-date"])
+def test_invalid_filters_are_rejected(client, query):
+    assert client.get(f"/api/trades?{query}").status_code == 422
+
 def test_get_stats_no_filters_control_values(client):
     response = client.get("/api/stats")
     assert response.status_code == 200
@@ -134,3 +148,31 @@ def test_ready_endpoint(client):
     response = client.get("/ready")
     assert response.status_code == 200
 
+def test_health_does_not_require_database():
+    def unavailable_db():
+        raise AssertionError("health endpoint must not resolve the database")
+        yield
+
+    app.dependency_overrides[get_db] = unavailable_db
+    try:
+        with TestClient(app) as test_client:
+            assert test_client.get("/health").json() == {"status": "ok"}
+    finally:
+        app.dependency_overrides.clear()
+
+def test_ready_hides_database_error():
+    class BrokenSession:
+        def execute(self, query):
+            raise RuntimeError("postgres://secret-user:secret-password@db/trades")
+
+    def broken_db():
+        yield BrokenSession()
+
+    app.dependency_overrides[get_db] = broken_db
+    try:
+        with TestClient(app, raise_server_exceptions=False) as test_client:
+            response = test_client.get("/ready")
+        assert response.status_code == 503
+        assert response.json() == {"detail": "Database unreachable"}
+    finally:
+        app.dependency_overrides.clear()
