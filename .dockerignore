@@ -1,0 +1,12 @@
+.git
+.venv
+.env
+.pytest_cache
+__pycache__
+*.py[cod]
+*.db
+**/node_modules
+**/dist
+**/.pytest_cache
+task/data/trades.csv
+task/mentor

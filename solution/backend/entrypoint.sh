@@ -6,4 +6,5 @@ if [ ! -f "$csv_path" ]; then
     python task/data/seed.py
 fi
 
-exec python -m app.seed --if-empty
+python -m app.seed --if-empty
+exec "$@"
