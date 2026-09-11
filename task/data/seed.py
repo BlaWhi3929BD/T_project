@@ -15,6 +15,7 @@ from __future__ import annotations
 
 import csv
 import math
+import os
 import random
 from datetime import date, datetime, timedelta, timezone
 from decimal import Decimal, ROUND_HALF_UP
@@ -22,7 +23,7 @@ from pathlib import Path
 
 ROWS = 100_000
 SEED = 20260831
-OUT = Path(__file__).parent / "trades.csv"
+OUT = Path(os.environ.get("CSV_PATH", Path(__file__).parent / "trades.csv"))
 
 UTC = timezone.utc
 PERIOD_START = datetime(2024, 1, 1, 0, 0, 0, tzinfo=UTC)

@@ -9,8 +9,8 @@ metadata:
 spec:
   type: ClusterIP
   ports:
-    - port: 80
-      targetPort: 80
+    - port: 8080
+      targetPort: 8080
       name: http
   selector:
     app.kubernetes.io/name: trades-dashboard
@@ -46,7 +46,7 @@ spec:
           image: trades-frontend:latest
           imagePullPolicy: IfNotPresent
           ports:
-            - containerPort: 80
+            - containerPort: 8080
               name: http
           resources:
             requests:
@@ -64,12 +64,12 @@ spec:
           volumeMounts:
             - name: nginx-cache
               mountPath: /var/cache/nginx
-            - name: nginx-run
-              mountPath: /var/run
+            - name: nginx-tmp
+              mountPath: /tmp
           livenessProbe:
             httpGet:
               path: /
-              port: 80
+              port: 8080
             initialDelaySeconds: 5
             periodSeconds: 10
             timeoutSeconds: 3
@@ -77,7 +77,7 @@ spec:
           readinessProbe:
             httpGet:
               path: /
-              port: 80
+              port: 8080
             initialDelaySeconds: 3
             periodSeconds: 5
             timeoutSeconds: 3
@@ -85,5 +85,5 @@ spec:
       volumes:
         - name: nginx-cache
           emptyDir: {}
-        - name: nginx-run
+        - name: nginx-tmp
           emptyDir: {}
