@@ -46,8 +46,18 @@ source .venv/bin/activate
 # 3. Установить зависимости:
 pip install -r requirements.txt
 
-# 4. Загрузить данные из CSV в SQLite:
-python solution/backend/scripts/seed_db.py
+# 4. Сгенерировать CSV и загрузить данные в SQLite:
+python task/data/seed.py
+
+# Bash / Linux / macOS:
+PYTHONPATH=solution/backend python -m app.seed --if-empty
+
+# Fish:
+# env PYTHONPATH=solution/backend python -m app.seed --if-empty
+
+# Windows PowerShell:
+# $env:PYTHONPATH = "solution/backend"
+# python -m app.seed --if-empty
 ```
 
 #### Запуск:
@@ -58,9 +68,13 @@ PYTHONPATH=solution/backend .venv/bin/uvicorn app.main:app --host 127.0.0.1 --po
 # Fish:
 # env PYTHONPATH=solution/backend .venv/bin/uvicorn app.main:app --host 127.0.0.1 --port 8000
 
-# Windows (PowerShell / CMD):
+# Windows PowerShell:
+# $env:PYTHONPATH = "solution/backend"
+# python -m uvicorn app.main:app --host 127.0.0.1 --port 8000
+
+# Windows CMD:
 # set PYTHONPATH=solution/backend
-# .venv/bin/uvicorn app.main:app --host 127.0.0.1 --port 8000
+# python -m uvicorn app.main:app --host 127.0.0.1 --port 8000
 ```
 API доступно по адресу `http://localhost:8000`. Документация Swagger — `http://localhost:8000/docs`.
 
@@ -146,7 +160,11 @@ docker compose version
    ```bash
    docker compose up --build -d
    ```
-   *Что происходит при первом запуске:* поднимается PostgreSQL 16, сервис `db-seed` один раз импортирует 100 000 строк из `trades.csv` в БД, после чего стартуют бэкенд и фронтенд.
+   *Что происходит при первом запуске:* поднимается PostgreSQL 16, backend генерирует `trades.csv` внутри контейнера и выполняет идемпотентную загрузку до старта Uvicorn. После успешного seed запускаются API и frontend.
+
+   Пароль PostgreSQL не хранится в `docker-compose.yml`. Перед запуском замените
+   `change-me` в `.env` на собственное значение. Compose завершится с ошибкой,
+   если обязательные переменные не заданы.
 
 ### Проверка работоспособности
 - **Дашборд:** открыть в браузере `http://localhost:8080` (графики и таблица должны быть заполнены данными).
@@ -155,7 +173,7 @@ docker compose version
   - `curl http://localhost:8080/health` → `200 {"status":"ok"}`
   - `curl http://localhost:8080/ready` → `200 {"status":"ready"}`
 - **Безопасность портов:** `curl http://localhost:8000` с хоста **не отвечает** (порт бэкенда изолирован внутри сети Docker).
-- **Статус контейнеров:** `docker compose ps` — все три сервиса (`trades-postgres`, `trades-backend`, `trades-frontend`) должны быть в состоянии `healthy` (trades-frontend иногда может быть unhealthy).
+- **Статус контейнеров:** `docker compose ps` — все три сервиса (`trades-postgres`, `trades-backend`, `trades-frontend`) должны быть в состоянии `healthy`.
 
 ### Повторный запуск (без пересоздания и без повторного сидинга)
 Если вы остановили контейнеры через `docker compose down`:
@@ -165,16 +183,12 @@ docker compose up -d
 *Данные в PostgreSQL сохраняются в именованном томе (`postgres_data`). Повторная загрузка CSV не производится, время старта минимально.*
 
 ### Запуск тестов в контейнере
-Для запуска всех тестов `pytest` внутри изолированного контейнера бэкенда:
+Для запуска всех тестов `pytest` внутри тестового образа бэкенда:
 ```bash
-docker build --target test -t trades-backend-test -f solution/backend/Dockerfile solution/backend
-docker run --rm -v $(pwd)/task/data:/app/task/data trades-backend-test
+docker compose --profile test run --rm backend-test
 ```
-*(Либо через Docker Compose):*
-
-```bash
-docker compose run --rm backend-test
-```
+Тестовый сервис находится в профиле `test` и не запускается при обычном
+`docker compose up`.
 
 ### Полный сброс (удаление данных и контейнеров)
 
@@ -210,8 +224,8 @@ docker compose down -v
 sudo apt-get update && sudo apt-get install -y apt-transport-https ca-certificates curl
 curl -fsSL https://pkgs.k8s.io/core:/stable:/v1.31/deb/Release.key | sudo gpg --dearmor -o /etc/apt/keyrings/kubernetes-apt-keyring.gpg
 sudo chmod 644 /etc/apt/keyrings/kubernetes-apt-keyring.gpg
-echo 'deb [signed-by=/etc/apt/keyrings/kubernetes-apt-keyring.gpg] https://pkgs.k8s.io/core:/stable:/v1.31/deb/ /' | sudo tee /etc/apt/sources.list.dir/kubernetes.list
-sudo chmod 644 /etc/apt/sources.list.dir/kubernetes.list
+echo 'deb [signed-by=/etc/apt/keyrings/kubernetes-apt-keyring.gpg] https://pkgs.k8s.io/core:/stable:/v1.31/deb/ /' | sudo tee /etc/apt/sources.list.d/kubernetes.list
+sudo chmod 644 /etc/apt/sources.list.d/kubernetes.list
 sudo apt-get update && sudo apt-get install -y kubectl
 
 # 2. Установка minikube:
@@ -288,20 +302,53 @@ minikube tunnel
 ```
 </details>
 
-### Деплой приложения одной командой
-1. Сделайте образы бэкенда и фронтенда доступными для кластера:
+### Деплой приложения
+1. Для Kubernetes создайте Secret командой до применения Kustomize:
+   ```bash
+   kubectl create namespace trades-dashboard --dry-run=client -o yaml | kubectl apply -f -
+   kubectl -n trades-dashboard create secret generic postgres-secret \
+     --from-literal=POSTGRES_DB=trades_db \
+     --from-literal=POSTGRES_USER=trades_user \
+     --from-literal=POSTGRES_PASSWORD='replace-me' \
+     --from-literal=DATABASE_URL='postgresql://trades_user:replace-me@postgres:5432/trades_db' \
+     --dry-run=client -o yaml | kubectl apply -f -
+   ```
+   Файл `k8s/postgres-secret.yaml` не подключён в Kustomize и оставлен только
+   как справочный шаблон; production-секреты создаются отдельной командой.
+
+2. Сделайте образы бэкенда и фронтенда доступными для кластера:
    ```bash
    # Для minikube (загрузка локально собранных образов):
-   docker build -t trades-backend:latest -f solution/backend/Dockerfile .
-   docker build -t trades-frontend:latest -f solution/frontend/Dockerfile solution/frontend
-   minikube image load trades-backend:latest
-   minikube image load trades-frontend:latest
+   TAG=$(git rev-parse --short HEAD)
+   docker build -t trades-backend:$TAG -f solution/backend/Dockerfile .
+   docker build -t trades-frontend:$TAG -f solution/frontend/Dockerfile solution/frontend
+   minikube image load trades-backend:$TAG
+   minikube image load trades-frontend:$TAG
    ```
-2. Разверните все ресурсы одной командой через **Kustomize**:
+   В PowerShell сначала задайте тег так:
+   ```powershell
+   $env:TAG = (git rev-parse --short HEAD)
+   docker build -t "trades-backend:$env:TAG" -f solution/backend/Dockerfile .
+   docker build -t "trades-frontend:$env:TAG" -f solution/frontend/Dockerfile solution/frontend
+   minikube image load "trades-backend:$env:TAG"
+   minikube image load "trades-frontend:$env:TAG"
+   ```
+3. Укажите этот тег через Kustomize перед развёртыванием:
+   ```bash
+   sed -i "s/newTag: latest/newTag: $TAG/g" k8s/kustomization.yaml
+   ```
+   В PowerShell используйте:
+   ```powershell
+   (Get-Content k8s/kustomization.yaml) -replace 'newTag: latest', "newTag: $env:TAG" |
+     Set-Content k8s/kustomization.yaml
+   ```
+4. Разверните ресурсы через **Kustomize**:
    ```bash
    kubectl apply -k k8s/
    ```
-   *Что происходит:* Создается пространство имен `trades-dashboard`, поднимается PostgreSQL (`StatefulSet` + PV), запускается Job `db-seed` (импортирует данные ровно один раз), стартуют поды бэкенда и фронтенда, а Ingress маршрутизирует трафик.
+   *Что происходит:* создаются namespace, PostgreSQL (`StatefulSet` + PVC),
+   backend и frontend. Backend ждёт готовности PostgreSQL, генерирует CSV и
+   выполняет seed до запуска Uvicorn. Отдельного Job для загрузки данных нет.
 
 ### Проверка работоспособности в кластере
 ```bash
@@ -310,16 +357,35 @@ kubectl get all -n trades-dashboard
 
 # Ожидаемый результат:
 # - Все поды в состоянии Running
-# - Job db-seed-xxxxx завершен со статусом Completed
+# - backend и frontend имеют Ready-поды
+# - PostgreSQL имеет Ready-под
 ```
-После этого дашборд будет доступен по адресу: `http://trades.local` (с использованием `minikube tunnel` или напрямую по IP).
+После этого дождитесь готовности всех Pod:
+```bash
+kubectl wait --for=condition=ready pod --all -n trades-dashboard --timeout=15m
+```
+Дашборд будет доступен по адресу `http://trades.local` (с использованием
+`minikube tunnel` или напрямую по IP).
 
 ### Обновление конфигурации
 Вы можете безопасно обновлять манифесты и делать повторный `apply`:
 ```bash
 kubectl apply -k k8s/
 ```
-*Загруженное количество сделок в БД не изменится, повторный сидинг Job производиться не будет.*
+*Загруженное количество сделок в БД не изменится, повторный отдельный Job не
+запускается.*
+
+При повторном запуске entrypoint сравнивает количество строк в таблице с
+количеством строк в CSV. Полный датасет пропускается. Если загрузка была
+прервана до commit, транзакция откатывается, и следующий запуск выполняет её
+заново. Поэтому перезапуск Pod безопасен и не оставляет частично загруженную
+таблицу.
+
+### Обновление образов
+Для выкладки новой версии соберите образы с новым тегом, снова загрузите их
+в minikube и замените старые значения `image` в манифестах. Новый тег меняет
+Pod template, поэтому Deployment создаёт новые Pod. Не используйте `latest`
+вместе с `IfNotPresent`: Kubernetes может оставить старый локальный образ.
 
 ### Масштабирование бэкенда
 Вы можете масштабировать бэкенд на несколько реплик:
@@ -338,15 +404,21 @@ kubectl delete -k k8s/
 
 ## 4. Производительность и бенчмарки
 
-Замеры скорости производились на полном датасете (100 000 записей) без фильтров при помощи утилиты `ab` (Apache Benchmark) локально при уровне конкурентности `-c 5` (100 запросов):
+Контрольная проверка выполняется на полном датасете (100 000 записей) без
+фильтров. Статистика агрегируется SQL-запросами в базе данных, а не загружает
+весь датасет в pandas на каждый запрос. Для повторяемого замера используйте
+`ab` с параметрами ниже на конкретном окружении:
 
 | Эндпоинт | Требование SLA (одиночные запросы) | Фактический результат под нагрузкой (p95, c=5) |
 |---|---|---|
-| `GET /api/stats` | < 200 мс | **~11.0 сек** (высокая нагрузка из-за обработки Pandas + SQLite) |
-| `GET /api/trades` | < 100 мс | **~82 мс** (полностью соответствует SLA) |
+| `GET /api/stats` | < 200 мс | Измеряется на PostgreSQL/SQLite текущего окружения |
+| `GET /api/trades` | < 100 мс | Измеряется на текущем окружении |
 
 > **Примечание по производительности `/api/stats`:**
-> Высокое время отклика под нагрузкой связано с тем, что расчет сложной метрики накопленной доходности (Equity Curve) для 100 000 записей выполняется «на лету» средствами библиотеки `pandas` на бэкенде в синхронном режиме (для точности группировки во временной зоне `Asia/Almaty`), что блокирует однопоточный цикл событий FastAPI при параллельных запросах. Одиночные запросы после прогрева укладываются в рамки лимитов.
+> Дневные суммы и базовые агрегаты вычисляются в SQL, а обработчик использует
+> синхронный режим FastAPI для синхронного SQLAlchemy. Поэтому результат зависит
+> от выбранной СУБД, индексов и ресурсов контейнера; приведённые выше SLA не
+> следует считать автоматически подтверждёнными без замера в целевом окружении.
 
 #### Команды для воспроизведения замера:
 ```bash
@@ -358,6 +430,9 @@ ab -n 100 -c 5 http://127.0.0.1:8000/api/stats
 
 # Замер /api/trades:
 ab -n 100 -c 5 "http://127.0.0.1:8000/api/trades?page=1&page_size=50"
+
+# Отдельный замер одиночного запроса:
+ab -n 1 -c 1 http://127.0.0.1:8000/api/stats
 ```
 
 ---

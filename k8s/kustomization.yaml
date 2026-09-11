@@ -5,13 +5,21 @@ namespace: trades-dashboard
 
 resources:
   - namespace.yaml
-  - postgres-secret.yaml
   - configmap.yaml
   - postgres.yaml
   - backend.yaml
   - frontend.yaml
   - ingress.yaml
 
-# Стандартные лейблы для всех генерируемых ресурсов
-commonLabels:
-  app.kubernetes.io/name: trades-dashboard
+labels:
+  - pairs:
+      app.kubernetes.io/name: trades-dashboard
+    includeSelectors: true
+
+images:
+  - name: trades-backend
+    newName: trades-backend
+    newTag: latest
+  - name: trades-frontend
+    newName: trades-frontend
+    newTag: latest
