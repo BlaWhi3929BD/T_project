@@ -20,7 +20,12 @@ function App() {
         </p>
       </header>
 
-      <FiltersPanel filters={filters} options={options} onFilterChange={updateFilters} />
+      {/* 1. Панель фильтров */}
+      <FiltersPanel
+        filters={filters}
+        options={options}
+        onFilterChange={updateFilters}
+      />
 
       {error && (
         <div className="card" style={{ color: '#ef4444', borderColor: '#fecaca', background: '#fef2f2' }}>
@@ -28,36 +33,26 @@ function App() {
         </div>
       )}
 
+      {/* 2. Строка метрик */}
       <Metrics stats={stats} />
 
+      {/* 3. График Equity */}
       {stats && stats.equity_curve.length > 0 ? (
         <EquityChart data={stats.equity_curve} />
       ) : (
-        <div
-          className="card"
-          style={{
-            height: '200px',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            color: '#6b7280',
-          }}
-        >
+        <div className="card" style={{ height: '200px', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#6b7280' }}>
           {loading ? 'Загрузка графика...' : 'Нет данных для отображения графика'}
         </div>
       )}
 
-      <TradesTable data={tradesData} filters={filters} onFilterChange={updateFilters} />
+      {/* 4. Таблица сделок */}
+      <TradesTable
+        data={tradesData}
+        filters={filters}
+        onFilterChange={updateFilters}
+      />
 
-      <footer
-        style={{
-          marginTop: '3rem',
-          paddingBottom: '2rem',
-          textAlign: 'center',
-          color: '#9ca3af',
-          fontSize: '0.75rem',
-        }}
-      >
+      <footer style={{ marginTop: '3rem', paddingBottom: '2rem', textAlign: 'center', color: '#9ca3af', fontSize: '0.75rem' }}>
         &copy; 2024 Trades Dashboard. Asia/Almaty timezone used for all daily groupings.
       </footer>
     </div>

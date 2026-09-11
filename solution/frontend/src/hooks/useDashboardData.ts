@@ -14,12 +14,17 @@ interface DashboardData {
 
 const EMPTY_OPTIONS: FilterOptions = { symbols: [], strategies: [] };
 
+function requestError(error: unknown, fallback: string): string | null {
+  return error instanceof Error && error.name === 'AbortError' ? null : fallback;
+}
+
 export function useDashboardData(filters: DashboardFilters): DashboardData {
   const [options, setOptions] = useState<FilterOptions>(EMPTY_OPTIONS);
   const [stats, setStats] = useState<StatsResponse | null>(null);
   const [tradesData, setTradesData] = useState<TradeListResponse | null>(null);
   const [statsError, setStatsError] = useState<string | null>(null);
   const [tradesError, setTradesError] = useState<string | null>(null);
+  const [optionsError, setOptionsError] = useState<string | null>(null);
   const [statsLoading, setStatsLoading] = useState(true);
   const [tradesLoading, setTradesLoading] = useState(true);
 
@@ -56,10 +61,9 @@ export function useDashboardData(filters: DashboardFilters): DashboardData {
       .then((nextStats) => {
         if (!controller.signal.aborted) setStats(nextStats);
       })
-      .catch((requestError: unknown) => {
-        if (requestError instanceof Error && requestError.name === 'AbortError') return;
+      .catch((error: unknown) => {
         if (!controller.signal.aborted) {
-          setStatsError('Ошибка при загрузке статистики');
+          setStatsError(requestError(error, 'Ошибка при загрузке статистики'));
         }
       })
       .finally(() => {
@@ -79,10 +83,9 @@ export function useDashboardData(filters: DashboardFilters): DashboardData {
       .then((nextTrades) => {
         if (!controller.signal.aborted) setTradesData(nextTrades);
       })
-      .catch((requestError: unknown) => {
-        if (requestError instanceof Error && requestError.name === 'AbortError') return;
+      .catch((error: unknown) => {
         if (!controller.signal.aborted) {
-          setTradesError('Ошибка при загрузке списка сделок');
+          setTradesError(requestError(error, 'Ошибка при загрузке списка сделок'));
         }
       })
       .finally(() => {
@@ -99,10 +102,9 @@ export function useDashboardData(filters: DashboardFilters): DashboardData {
       .then((nextOptions) => {
         if (!controller.signal.aborted) setOptions(nextOptions);
       })
-      .catch((requestError: unknown) => {
-        if (requestError instanceof Error && requestError.name === 'AbortError') return;
+      .catch((error: unknown) => {
         if (!controller.signal.aborted) {
-          setTradesError('Ошибка при загрузке списков фильтров');
+          setOptionsError(requestError(error, 'Ошибка при загрузке списков фильтров'));
         }
       });
 
@@ -115,6 +117,6 @@ export function useDashboardData(filters: DashboardFilters): DashboardData {
     tradesData,
     statsLoading,
     tradesLoading,
-    error: statsError ?? tradesError,
+    error: [optionsError, statsError, tradesError].filter(Boolean).join('; ') || null,
   };
 }
