@@ -10,7 +10,6 @@ resources:
   - postgres.yaml
   - backend.yaml
   - frontend.yaml
-  - db-seed-job.yaml
   - ingress.yaml
 
 # Стандартные лейблы для всех генерируемых ресурсов

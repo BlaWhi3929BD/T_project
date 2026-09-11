@@ -5,7 +5,9 @@ from __future__ import annotations
 import argparse
 import csv
 import hashlib
+import logging
 import os
+import time
 from collections.abc import Iterator
 from contextlib import contextmanager
 from datetime import UTC, datetime
@@ -15,11 +17,15 @@ from pathlib import Path
 from app.database import SessionLocal, create_db_and_tables
 from app.models import Trade
 from sqlalchemy import text
+from sqlalchemy.exc import OperationalError
 from sqlalchemy.orm import Session
 
 DEFAULT_CSV_PATH = "/app/task/data/trades.csv"
 LOCK_KEY = int.from_bytes(hashlib.sha256(b"trades-dashboard-seed").digest()[:8], "big", signed=True)
 DECIMAL_FIELDS = ("qty", "entry_price", "exit_price", "fee", "pnl")
+DATABASE_RETRY_ATTEMPTS = int(os.getenv("DATABASE_RETRY_ATTEMPTS", "60"))
+DATABASE_RETRY_DELAY = float(os.getenv("DATABASE_RETRY_DELAY", "2"))
+logger = logging.getLogger(__name__)
 
 
 def csv_path_from_environment() -> Path:
@@ -105,16 +111,31 @@ def main() -> None:
     parser.add_argument("--csv-path", type=Path, default=None)
     args = parser.parse_args()
 
-    db = SessionLocal()
-    try:
-        seed_database(
-            db,
-            csv_path=args.csv_path,
-            if_empty=args.if_empty or not args.force,
-            force=args.force,
-        )
-    finally:
-        db.close()
+    for attempt in range(1, DATABASE_RETRY_ATTEMPTS + 1):
+        db = SessionLocal()
+        try:
+            seed_database(
+                db,
+                csv_path=args.csv_path,
+                if_empty=args.if_empty or not args.force,
+                force=args.force,
+            )
+            return
+        except OperationalError as error:
+            db.rollback()
+            if getattr(error.orig, "pgcode", None) == "28P01":
+                raise
+            if attempt >= DATABASE_RETRY_ATTEMPTS:
+                raise
+            logger.warning(
+                "Database is not ready; retrying in %.1f seconds (%d/%d)",
+                DATABASE_RETRY_DELAY,
+                attempt,
+                DATABASE_RETRY_ATTEMPTS,
+            )
+            time.sleep(DATABASE_RETRY_DELAY)
+        finally:
+            db.close()
 
 
 if __name__ == "__main__":
