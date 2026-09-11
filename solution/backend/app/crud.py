@@ -6,7 +6,7 @@ from typing import Any
 
 from app.models import Trade
 from app.schemas import TradeCreate
-from sqlalchemy import asc, case, desc, func, text
+from sqlalchemy import asc, case, desc, func, literal_column
 from sqlalchemy.orm import Session
 
 # The dataset and task contract define Almaty as UTC+5 without DST.
@@ -101,7 +101,7 @@ def get_filter_options(db: Session) -> tuple[list[str], list[str]]:
 
 def _day_expression(db: Session) -> Any:
     if db.bind is not None and db.bind.dialect.name == "postgresql":
-        return text("(closed_at AT TIME ZONE 'Asia/Almaty')::date")
+        return literal_column("(closed_at AT TIME ZONE 'Asia/Almaty')::date")
     return func.date(Trade.closed_at, "+5 hours")
 
 

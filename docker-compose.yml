@@ -21,22 +21,10 @@ services:
       context: .
       dockerfile: solution/backend/Dockerfile
       target: test
+    profiles:
+      - test
     environment:
       DATABASE_URL: ${DATABASE_URL:-postgresql://user:123@postgres:5432/trades_db}
-    depends_on:
-      postgres:
-        condition: service_healthy
-
-  # Инициализация базы данных: выполняется один раз при первом запуске
-  db-seed:
-    build:
-      context: .
-      dockerfile: solution/backend/Dockerfile
-    container_name: trades-db-seed
-    environment:
-      DATABASE_URL: ${DATABASE_URL:-postgresql://user:123@postgres:5432/trades_db}
-    # Используем --if-empty для того, чтобы при повторном запуске данные не перезаписывались и не стирались
-    command: python scripts/seed_db.py --if-empty
     depends_on:
       postgres:
         condition: service_healthy
@@ -52,8 +40,6 @@ services:
     depends_on:
       postgres:
         condition: service_healthy
-      db-seed:
-        condition: service_completed_successfully
 
   frontend:
     build:
@@ -62,7 +48,7 @@ services:
     container_name: trades-frontend
     restart: unless-stopped
     ports:
-      - "8080:80"
+      - "8080:8080"
     depends_on:
       backend:
         condition: service_healthy
