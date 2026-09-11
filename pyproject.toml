@@ -1,0 +1,11 @@
+[tool.ruff]
+target-version = "py311"
+line-length = 100
+exclude = ["solution/backend/test.db", "solution/backend/trades.db"]
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "UP"]
+
+[tool.ruff.format]
+quote-style = "double"
+indent-style = "space"

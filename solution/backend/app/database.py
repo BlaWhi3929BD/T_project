@@ -1,4 +1,5 @@
 import os
+
 from sqlalchemy import create_engine
 from sqlalchemy.orm import declarative_base, sessionmaker
 
@@ -27,6 +28,7 @@ SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
 # Базовый класс для объявления моделей SQLAlchemy
 Base = declarative_base()
 
+
 # Зависимость для получения сессии базы данных
 def get_db():
     """
@@ -39,9 +41,9 @@ def get_db():
     finally:
         db.close()
 
+
 def create_db_and_tables():
     """
     Создает все таблицы в базе данных, определенные через Base.metadata.
     """
     Base.metadata.create_all(bind=engine)
-

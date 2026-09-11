@@ -1,13 +1,12 @@
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from decimal import Decimal
 
 import pytest
-from sqlalchemy import create_engine
-from sqlalchemy.orm import Session
-
 from app import crud
 from app.database import Base
 from app.models import Trade
+from sqlalchemy import create_engine
+from sqlalchemy.orm import Session
 
 
 @pytest.fixture()
@@ -22,8 +21,8 @@ def db():
                     symbol="BTCUSDT",
                     strategy="test",
                     side="long",
-                    opened_at=datetime(2024, 1, 1, tzinfo=timezone.utc),
-                    closed_at=datetime(2024, 1, 1, 18, 59, 59, tzinfo=timezone.utc),
+                    opened_at=datetime(2024, 1, 1, tzinfo=UTC),
+                    closed_at=datetime(2024, 1, 1, 18, 59, 59, tzinfo=UTC),
                     qty=Decimal("1"),
                     entry_price=Decimal("100"),
                     exit_price=Decimal("110"),
@@ -35,8 +34,8 @@ def db():
                     symbol="BTCUSDT",
                     strategy="test",
                     side="short",
-                    opened_at=datetime(2024, 1, 1, tzinfo=timezone.utc),
-                    closed_at=datetime(2024, 1, 1, 19, 0, 0, tzinfo=timezone.utc),
+                    opened_at=datetime(2024, 1, 1, tzinfo=UTC),
+                    closed_at=datetime(2024, 1, 1, 19, 0, 0, tzinfo=UTC),
                     qty=Decimal("1"),
                     entry_price=Decimal("100"),
                     exit_price=Decimal("103"),
@@ -48,8 +47,8 @@ def db():
                     symbol="ETHUSDT",
                     strategy="test",
                     side="long",
-                    opened_at=datetime(2024, 1, 1, tzinfo=timezone.utc),
-                    closed_at=datetime(2024, 1, 4, 12, 0, tzinfo=timezone.utc),
+                    opened_at=datetime(2024, 1, 1, tzinfo=UTC),
+                    closed_at=datetime(2024, 1, 4, 12, 0, tzinfo=UTC),
                     qty=Decimal("1"),
                     entry_price=Decimal("100"),
                     exit_price=Decimal("100"),
@@ -61,8 +60,8 @@ def db():
                     symbol="ETHUSDT",
                     strategy="test",
                     side="long",
-                    opened_at=datetime(2024, 1, 1, tzinfo=timezone.utc),
-                    closed_at=datetime(2024, 1, 4, 13, 0, tzinfo=timezone.utc),
+                    opened_at=datetime(2024, 1, 1, tzinfo=UTC),
+                    closed_at=datetime(2024, 1, 4, 13, 0, tzinfo=UTC),
                     qty=Decimal("1"),
                     entry_price=Decimal("100"),
                     exit_price=Decimal("102"),
@@ -100,7 +99,8 @@ def test_stats_formulas_and_continuous_curve(db):
 
 
 def test_date_filter_uses_almaty_day_boundary(db):
-    stats = crud.get_trade_stats(db, date_from=datetime(2024, 1, 2).date(), date_to=datetime(2024, 1, 2).date())
+    day = datetime(2024, 1, 2).date()
+    stats = crud.get_trade_stats(db, date_from=day, date_to=day)
 
     assert stats["trades_count"] == 1
     assert stats["net_pnl"] == "-3.00"

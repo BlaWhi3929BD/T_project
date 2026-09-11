@@ -1,15 +1,15 @@
-from typing import List, Optional
-from datetime import date
 import logging
-from fastapi import FastAPI, Depends, Query, status, HTTPException
-from sqlalchemy.orm import Session
-from sqlalchemy import text
 from contextlib import asynccontextmanager
+from datetime import date
 
-from app.database import create_db_and_tables, get_db
 from app import crud, schemas
+from app.database import create_db_and_tables, get_db
+from fastapi import Depends, FastAPI, HTTPException, Query, status
+from sqlalchemy import text
+from sqlalchemy.orm import Session
 
 logger = logging.getLogger(__name__)
+
 
 # Используем Lifespan для управления жизненным циклом приложения
 @asynccontextmanager
@@ -19,13 +19,15 @@ async def lifespan(app: FastAPI):
     yield
     # Действия при завершении (если нужны)
 
+
 # Инициализация FastAPI приложения
 app = FastAPI(
     title="Trades Dashboard API",
     description="API для дашборда аналитики по сделкам",
     version="1.0.0",
-    lifespan=lifespan
+    lifespan=lifespan,
 )
+
 
 @app.get("/")
 def read_root():
@@ -34,6 +36,7 @@ def read_root():
     """
     return {"message": "Welcome to the Trades Dashboard API!"}
 
+
 @app.get("/health", status_code=200)
 def health():
     """
@@ -41,6 +44,7 @@ def health():
     Возвращает 200 {"status":"ok"}, к базе данных не обращается.
     """
     return {"status": "ok"}
+
 
 @app.get("/ready", status_code=200)
 def ready(db: Session = Depends(get_db)):
@@ -68,15 +72,24 @@ def get_filters_options(db: Session = Depends(get_db)):
     symbols, strategies = crud.get_filter_options(db)
     return {"symbols": symbols, "strategies": strategies}
 
+
 @app.get("/api/trades", response_model=schemas.TradeListResponse)
 def list_trades(
     db: Session = Depends(get_db),
-    symbol: Optional[List[str]] = Query(None, max_length=crud.MAX_FILTER_VALUES, description="Фильтр по символу"),
-    strategy: Optional[List[str]] = Query(None, max_length=crud.MAX_FILTER_VALUES, description="Фильтр по стратегии"),
-    side: Optional[str] = Query(None, pattern="^(long|short)$", description="Фильтр по стороне сделки"),
-    date_from: Optional[date] = Query(None, description="Фильтр по дате закрытия от"),
-    date_to: Optional[date] = Query(None, description="Фильтр по дате закрытия до"),
-    sort: str = Query("closed_at", pattern="^(closed_at|pnl|symbol)$", description="Поле для сортировки"),
+    symbol: list[str] | None = Query(
+        None, max_length=crud.MAX_FILTER_VALUES, description="Фильтр по символу"
+    ),
+    strategy: list[str] | None = Query(
+        None, max_length=crud.MAX_FILTER_VALUES, description="Фильтр по стратегии"
+    ),
+    side: str | None = Query(
+        None, pattern="^(long|short)$", description="Фильтр по стороне сделки"
+    ),
+    date_from: date | None = Query(None, description="Фильтр по дате закрытия от"),
+    date_to: date | None = Query(None, description="Фильтр по дате закрытия до"),
+    sort: str = Query(
+        "closed_at", pattern="^(closed_at|pnl|symbol)$", description="Поле для сортировки"
+    ),
     order: str = Query("desc", pattern="^(asc|desc)$", description="Порядок сортировки"),
     page: int = Query(1, ge=1, description="Номер страницы"),
     page_size: int = Query(50, ge=1, le=200, description="Размер страницы"),
@@ -101,14 +114,21 @@ def list_trades(
     )
     return {"items": trades, "page": page, "page_size": page_size, "total": total_trades}
 
+
 @app.get("/api/stats", response_model=schemas.StatsResponse)
 def get_trades_stats(
     db: Session = Depends(get_db),
-    symbol: Optional[List[str]] = Query(None, max_length=crud.MAX_FILTER_VALUES, description="Фильтр по символу"),
-    strategy: Optional[List[str]] = Query(None, max_length=crud.MAX_FILTER_VALUES, description="Фильтр по стратегии"),
-    side: Optional[str] = Query(None, pattern="^(long|short)$", description="Фильтр по стороне сделки"),
-    date_from: Optional[date] = Query(None, description="Фильтр по дате закрытия от"),
-    date_to: Optional[date] = Query(None, description="Фильтр по дате закрытия до"),
+    symbol: list[str] | None = Query(
+        None, max_length=crud.MAX_FILTER_VALUES, description="Фильтр по символу"
+    ),
+    strategy: list[str] | None = Query(
+        None, max_length=crud.MAX_FILTER_VALUES, description="Фильтр по стратегии"
+    ),
+    side: str | None = Query(
+        None, pattern="^(long|short)$", description="Фильтр по стороне сделки"
+    ),
+    date_from: date | None = Query(None, description="Фильтр по дате закрытия от"),
+    date_to: date | None = Query(None, description="Фильтр по дате закрытия до"),
 ):
     """
     Возвращает статистические данные по отфильтрованным сделкам.

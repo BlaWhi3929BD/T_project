@@ -6,17 +6,16 @@ import argparse
 import csv
 import hashlib
 import os
+from collections.abc import Iterator
 from contextlib import contextmanager
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from decimal import Decimal
 from pathlib import Path
-from typing import Iterator
-
-from sqlalchemy import text
-from sqlalchemy.orm import Session
 
 from app.database import SessionLocal, create_db_and_tables
 from app.models import Trade
+from sqlalchemy import text
+from sqlalchemy.orm import Session
 
 DEFAULT_CSV_PATH = "/app/task/data/trades.csv"
 LOCK_KEY = int.from_bytes(hashlib.sha256(b"trades-dashboard-seed").digest()[:8], "big", signed=True)
@@ -29,7 +28,7 @@ def csv_path_from_environment() -> Path:
 
 def _parse_datetime(value: str) -> datetime:
     parsed = datetime.fromisoformat(value.replace("Z", "+00:00"))
-    return parsed.astimezone(timezone.utc)
+    return parsed.astimezone(UTC)
 
 
 def _read_rows(path: Path) -> list[dict[str, object]]:

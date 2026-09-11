@@ -1,18 +1,17 @@
 from __future__ import annotations
 
-from datetime import date, datetime, time, timedelta, timezone
-from decimal import Decimal, ROUND_HALF_UP
+from datetime import UTC, date, datetime, time, timedelta, timezone
+from decimal import ROUND_HALF_UP, Decimal
 from typing import Any
-
-from sqlalchemy import asc, case, desc, func, text
-from sqlalchemy.orm import Session
 
 from app.models import Trade
 from app.schemas import TradeCreate
+from sqlalchemy import asc, case, desc, func, text
+from sqlalchemy.orm import Session
 
 # The dataset and task contract define Almaty as UTC+5 without DST.
 ALMATY_TZ = timezone(timedelta(hours=5))
-UTC = timezone.utc
+UTC = UTC
 CENT = Decimal("0.01")
 MAX_FILTER_VALUES = 100
 

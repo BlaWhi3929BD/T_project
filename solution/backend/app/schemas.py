@@ -1,13 +1,16 @@
 from datetime import datetime
-from typing import List, Optional, Annotated
-from pydantic import BaseModel, Field, ConfigDict, BeforeValidator
 from decimal import Decimal
+from typing import Annotated
 
-# Валидатор для автоматической конвертации Decimal в строку (требование задания)
+from pydantic import BaseModel, BeforeValidator, ConfigDict
+
+
 def decimal_to_str(v: object) -> object:
     return str(v) if isinstance(v, Decimal) else v
 
+
 StrField = Annotated[str, BeforeValidator(decimal_to_str)]
+
 
 class TradeBase(BaseModel):
     symbol: str
@@ -21,27 +24,33 @@ class TradeBase(BaseModel):
     fee: StrField
     pnl: StrField
 
+
 class TradeCreate(TradeBase):
     pass
+
 
 class Trade(TradeBase):
     id: int
     model_config = ConfigDict(from_attributes=True)
 
+
 class TradeListResponse(BaseModel):
-    items: List[Trade]
+    items: list[Trade]
     page: int
     page_size: int
     total: int
 
+
 class FilterOptions(BaseModel):
-    symbols: List[str]
-    strategies: List[str]
+    symbols: list[str]
+    strategies: list[str]
+
 
 class EquityCurvePoint(BaseModel):
     date: str
     day_pnl: str
     cum_pnl: str
+
 
 class StatsResponse(BaseModel):
     trades_count: int
@@ -51,11 +60,11 @@ class StatsResponse(BaseModel):
     net_pnl: str
     gross_profit: str
     gross_loss: str
-    win_rate: Optional[float]
-    profit_factor: Optional[float]
-    avg_win: Optional[str]
-    avg_loss: Optional[str]
+    win_rate: float | None
+    profit_factor: float | None
+    avg_win: str | None
+    avg_loss: str | None
     best_trade: str
     worst_trade: str
     max_drawdown: str
-    equity_curve: List[EquityCurvePoint]
+    equity_curve: list[EquityCurvePoint]
