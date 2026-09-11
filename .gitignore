@@ -3,6 +3,8 @@ task/data/trades.csv
 task/mentor/
 trades.db
 test.db
+*.sqlite
+*.sqlite3
 
 # Python
 __pycache__/
@@ -13,7 +15,13 @@ __pycache__/
 venv/
 ENV/
 .pytest_cache/
+.ruff_cache/
+.mypy_cache/
+.pyre/
+.hypothesis/
 .coverage
+.coverage.*
+coverage.xml
 htmlcov/
 *.egg-info/
 *.egg
