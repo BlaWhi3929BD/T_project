@@ -19,7 +19,7 @@ labels:
 images:
   - name: trades-backend
     newName: trades-backend
-    newTag: latest
+    newTag: 74e55ea
   - name: trades-frontend
     newName: trades-frontend
-    newTag: latest
+    newTag: 74e55ea
