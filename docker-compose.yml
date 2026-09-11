@@ -4,13 +4,13 @@ services:
     container_name: trades-postgres
     restart: unless-stopped
     environment:
-      POSTGRES_DB: ${POSTGRES_DB:-trades_db}
-      POSTGRES_USER: ${POSTGRES_USER:-user}
-      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-123}
+      POSTGRES_DB: ${POSTGRES_DB:?POSTGRES_DB must be set}
+      POSTGRES_USER: ${POSTGRES_USER:?POSTGRES_USER must be set}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?POSTGRES_PASSWORD must be set}
     volumes:
       - postgres_data:/var/lib/postgresql/data
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-user} -d ${POSTGRES_DB:-trades_db}"]
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:?POSTGRES_USER must be set} -d ${POSTGRES_DB:?POSTGRES_DB must be set}"]
       interval: 5s
       timeout: 5s
       retries: 5
@@ -24,7 +24,7 @@ services:
     profiles:
       - test
     environment:
-      DATABASE_URL: ${DATABASE_URL:-postgresql://user:123@postgres:5432/trades_db}
+      DATABASE_URL: ${DATABASE_URL:?DATABASE_URL must be set}
     depends_on:
       postgres:
         condition: service_healthy
@@ -36,7 +36,7 @@ services:
     container_name: trades-backend
     restart: unless-stopped
     environment:
-      DATABASE_URL: ${DATABASE_URL:-postgresql://user:123@postgres:5432/trades_db}
+      DATABASE_URL: ${DATABASE_URL:?DATABASE_URL must be set}
     depends_on:
       postgres:
         condition: service_healthy
