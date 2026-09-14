@@ -66,6 +66,10 @@ spec:
               mountPath: /var/cache/nginx
             - name: nginx-tmp
               mountPath: /tmp
+            - name: nginx-lib-tmp
+              mountPath: /var/lib/nginx/tmp
+            - name: nginx-lib-logs
+              mountPath: /var/lib/nginx/logs
           livenessProbe:
             httpGet:
               path: /
@@ -86,4 +90,8 @@ spec:
         - name: nginx-cache
           emptyDir: {}
         - name: nginx-tmp
+          emptyDir: {}
+        - name: nginx-lib-tmp
+          emptyDir: {}
+        - name: nginx-lib-logs
           emptyDir: {}

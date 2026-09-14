@@ -11,7 +11,6 @@ RUN npm run build
 FROM nginx:1.28-alpine-slim
 
 COPY nginx.conf /etc/nginx/nginx.conf
-COPY --from=build /app/dist /usr/share/nginx/html
 
 # The nginx package is upgraded from the current Alpine security repository.
 # hadolint ignore=DL3018
@@ -26,10 +25,11 @@ RUN touch /tmp/nginx.pid \
         /etc/nginx/conf.d \
     && chown -R nginx:nginx \
         /tmp/nginx.pid \
-        /usr/share/nginx/html \
         /var/cache/nginx \
         /var/log/nginx \
         /etc/nginx/conf.d
+COPY --from=build /app/dist /usr/share/nginx/html
+RUN chown -R nginx:nginx /usr/share/nginx/html
 
 USER nginx
 

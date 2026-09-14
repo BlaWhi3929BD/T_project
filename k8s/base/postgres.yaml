@@ -7,7 +7,6 @@ metadata:
     app.kubernetes.io/name: trades-dashboard
     app.kubernetes.io/component: database
 spec:
-  clusterIP: None # Headless service для StatefulSet
   ports:
     - port: 5432
       name: postgresql
@@ -99,6 +98,15 @@ spec:
           volumeMounts:
             - name: postgres-storage
               mountPath: /var/lib/postgresql/data
+            - name: postgres-run
+              mountPath: /var/run/postgresql
+            - name: postgres-tmp
+              mountPath: /tmp
+      volumes:
+        - name: postgres-run
+          emptyDir: {}
+        - name: postgres-tmp
+          emptyDir: {}
   volumeClaimTemplates:
     - metadata:
         name: postgres-storage

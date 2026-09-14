@@ -179,3 +179,18 @@ security-пакеты при сборке. `.trivyignore` содержит то�
 слоёв базового Python-образа.
 Проверил так: CI workflow содержит отдельный security job, а изображения
 сканируются только после успешной сборки с commit-specific tags.
+
+## Решение: Реальный Kubernetes acceptance smoke-тест
+
+Контекст: Рендеринг Kustomize не подтверждает работу Ingress, Secret, seed,
+recovery и security-настроек в настоящем кластере.
+Варианты: Оставить только `kubectl kustomize`, ручная проверка по README,
+воспроизводимый acceptance-скрипт для minikube.
+Выбрал: `scripts/kubernetes-acceptance.sh` для запущенного minikube.
+Почему: Скрипт выполняет тот же путь, что и оператор: собирает и загружает
+commit-tagged образы, создаёт внешний Secret, применяет overlay, ждёт все
+поды и проверяет API через Ingress. Удаление backend и PostgreSQL pod
+подтверждает recovery и сохранность контрольного датасета. Временный image tag
+не оставляет локальных изменений в Kustomize-файле.
+Проверил так: Скрипт содержит проверки `/health`, `/ready`, `/api/stats`,
+`trades_count=100000`, `net_pnl="20373.96"`, non-root и read-only filesystem.

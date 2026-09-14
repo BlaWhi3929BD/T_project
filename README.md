@@ -414,6 +414,25 @@ kubectl wait --for=condition=ready pod --all -n trades-dashboard --timeout=15m
 Дашборд будет доступен по адресу `http://trades.local` (с использованием
 `minikube tunnel` или напрямую по IP).
 
+### Полный acceptance smoke-тест minikube
+
+Для проверки не только рендера манифестов, но и реального кластера выполните:
+
+```bash
+minikube start --driver=docker
+RESET_NAMESPACE=true TAG=$(git rev-parse --short HEAD) ./scripts/kubernetes-acceptance.sh
+```
+
+Скрипт собирает и загружает commit-tagged образы, создаёт Secret вне Git,
+включает Ingress и применяет local overlay. Затем он проверяет HTML, `/health`,
+`/ready` и `/api/stats` через Ingress, контрольные значения `100000` и
+`"20373.96"`, non-root/read-only security settings и восстановление после
+удаления backend и PostgreSQL pod. Временное изменение image tags в overlay
+автоматически возвращается после завершения скрипта. Для уже запущенного
+кластера достаточно выполнить только вторую команду. `RESET_NAMESPACE=true`
+удаляет существующий namespace перед тестом вместе с PVC, поэтому используйте
+этот режим только для отдельного acceptance-кластера или тестового окружения.
+
 ### Обновление конфигурации
 Вы можете безопасно обновлять манифесты и делать повторный `apply`:
 ```bash
