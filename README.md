@@ -209,14 +209,21 @@ CI выполняет следующие проверки безопасност
 - `docker history` проверяет, что credentials не попали в слои образов.
 
 Сканирование уязвимостей завершается ошибкой при обнаружении исправляемых
-уязвимостей уровня `HIGH` или `CRITICAL`. Для локального запуска после сборки
-образов установите [Trivy](https://aquasecurity.github.io/trivy/) и выполните:
+уязвимостей уровня `HIGH` или `CRITICAL`. Для локального запуска установите
+[Trivy](https://aquasecurity.github.io/trivy/), сначала соберите образы с тем
+же commit tag, а затем выполните сканирование:
 
 ```bash
-trivy image --scanners vuln,secret,misconfig --severity HIGH,CRITICAL \
-  --ignore-unfixed --exit-code 1 trades-backend:$(git rev-parse --short HEAD)
-trivy image --scanners vuln,secret,misconfig --severity HIGH,CRITICAL \
-  --ignore-unfixed --exit-code 1 trades-frontend:$(git rev-parse --short HEAD)
+TAG=$(git rev-parse --short HEAD)
+docker build -t trades-backend:$TAG -f solution/backend/Dockerfile .
+docker build -t trades-frontend:$TAG -f solution/frontend/Dockerfile solution/frontend
+
+trivy image --ignorefile .trivyignore \
+  --scanners vuln,secret,misconfig --severity HIGH,CRITICAL \
+  --ignore-unfixed --exit-code 1 trades-backend:$TAG
+trivy image --ignorefile .trivyignore \
+  --scanners vuln,secret,misconfig --severity HIGH,CRITICAL \
+  --ignore-unfixed --exit-code 1 trades-frontend:$TAG
 ```
 
 Рабочие credentials не должны храниться в репозитории, `.env` или Dockerfile.
