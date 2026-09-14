@@ -76,6 +76,13 @@ spec:
           volumeMounts:
             - name: tmp-volume
               mountPath: /tmp
+          startupProbe:
+            httpGet:
+              path: /health
+              port: 8000
+            periodSeconds: 10
+            timeoutSeconds: 3
+            failureThreshold: 60
           livenessProbe:
             httpGet:
               path: /health

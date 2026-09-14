@@ -95,3 +95,19 @@ Compose smoke-тест подтверждают контрольные знач�
 кластеру перед установкой.
 Проверил так: `git grep` не содержит рабочего пароля, а `kubectl apply -k k8s/`
 использует заранее созданный Secret.
+
+## Решение: Startup probe для backend
+
+Контекст: Первый запуск backend выполняет генерацию CSV и полный seed до старта
+Uvicorn, поэтому контейнер может долго не отвечать на HTTP-пробы.
+Варианты: Увеличить только `initialDelaySeconds`, добавить `startupProbe`,
+вынести seed в отдельный Kubernetes Job.
+Выбрал: `startupProbe` на `/health` с окном ожидания до 10 минут.
+Почему: Kubernetes не запускает liveness- и readiness-проверки до успешного
+startup probe. Это предотвращает преждевременный перезапуск pod во время
+первичной загрузки и сохраняет единый lifecycle seed в entrypoint backend.
+После успешного старта liveness проверяет живой процесс, а readiness проверяет
+доступность PostgreSQL через `/ready`.
+Проверил так: Kustomize-рендеринг содержит startup probe с 60 попытками по 10
+секунд; backend и Compose lifecycle-тесты сохраняют контрольные значения после
+первого и повторного запуска.

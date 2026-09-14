@@ -349,6 +349,10 @@ minikube tunnel
    *Что происходит:* создаются namespace, PostgreSQL (`StatefulSet` + PVC),
    backend и frontend. Backend ждёт готовности PostgreSQL, генерирует CSV и
    выполняет seed до запуска Uvicorn. Отдельного Job для загрузки данных нет.
+   На backend настроен `startupProbe` с окном до 10 минут: во время первой
+   генерации и загрузки данных Kubernetes не запускает liveness-проверку и не
+   перезапускает pod преждевременно. После запуска Uvicorn `/health` проходит
+   startup/liveness, а `/ready` подтверждает доступность PostgreSQL.
 
 ### Проверка работоспособности в кластере
 ```bash
@@ -364,6 +368,9 @@ kubectl get all -n trades-dashboard
 ```bash
 kubectl wait --for=condition=ready pod --all -n trades-dashboard --timeout=15m
 ```
+Десятиминутное окно startup probe входит в общий таймаут ожидания. Если pod не
+становится готовым за 15 минут, проверьте `kubectl describe pod` и логи backend:
+это обычно означает недоступный PostgreSQL, ошибку Secret или неудачный seed.
 Дашборд будет доступен по адресу `http://trades.local` (с использованием
 `minikube tunnel` или напрямую по IP).
 

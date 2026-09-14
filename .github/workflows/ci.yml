@@ -236,5 +236,6 @@ jobs:
         run: |
           grep -q 'kind: StatefulSet' /tmp/trades-dashboard-manifests.yaml
           grep -q 'kind: Deployment' /tmp/trades-dashboard-manifests.yaml
+          grep -q 'startupProbe:' /tmp/trades-dashboard-manifests.yaml
           ! grep -q '^kind: Job$' /tmp/trades-dashboard-manifests.yaml
           ! grep -q 'POSTGRES_PASSWORD: "123"' /tmp/trades-dashboard-manifests.yaml
