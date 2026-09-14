@@ -150,36 +150,35 @@ def get_trade_stats(
         date_from=date_from,
         date_to=date_to,
     )
-    aggregate = query.with_entities(
-        func.count(Trade.id).label("trades_count"),
-        func.sum(case((Trade.pnl > 0, 1), else_=0)).label("wins"),
-        func.sum(case((Trade.pnl < 0, 1), else_=0)).label("losses"),
-        func.sum(case((Trade.pnl == 0, 1), else_=0)).label("breakeven"),
-        func.sum(Trade.pnl).label("net_pnl"),
-        func.sum(case((Trade.pnl > 0, Trade.pnl), else_=0)).label("gross_profit"),
-        func.sum(case((Trade.pnl < 0, func.abs(Trade.pnl)), else_=0)).label("gross_loss"),
-        func.max(Trade.pnl).label("best"),
-        func.min(Trade.pnl).label("worst"),
-    ).one()
-
-    trades_count = int(aggregate.trades_count or 0)
-    if not trades_count:
-        return _empty_stats()
-
-    wins = int(aggregate.wins or 0)
-    losses = int(aggregate.losses or 0)
-    gross_profit = _money(aggregate.gross_profit)
-    gross_loss = _money(aggregate.gross_loss)
-
     daily_rows = (
         query.with_entities(
             _day_expression(db).label("day"),
+            func.count(Trade.id).label("trades_count"),
+            func.sum(case((Trade.pnl > 0, 1), else_=0)).label("wins"),
+            func.sum(case((Trade.pnl < 0, 1), else_=0)).label("losses"),
+            func.sum(case((Trade.pnl == 0, 1), else_=0)).label("breakeven"),
             func.sum(Trade.pnl).label("day_pnl"),
+            func.sum(case((Trade.pnl > 0, Trade.pnl), else_=0)).label("gross_profit"),
+            func.sum(case((Trade.pnl < 0, func.abs(Trade.pnl)), else_=0)).label("gross_loss"),
+            func.max(Trade.pnl).label("best"),
+            func.min(Trade.pnl).label("worst"),
         )
         .group_by(_day_expression(db))
-        .order_by(_day_expression(db))
         .all()
     )
+    daily_rows.sort(key=lambda row: row.day)
+    if not daily_rows:
+        return _empty_stats()
+
+    trades_count = sum(int(row.trades_count or 0) for row in daily_rows)
+    wins = sum(int(row.wins or 0) for row in daily_rows)
+    losses = sum(int(row.losses or 0) for row in daily_rows)
+    breakeven = sum(int(row.breakeven or 0) for row in daily_rows)
+    net_pnl = sum((_money(row.day_pnl) for row in daily_rows), Decimal("0"))
+    gross_profit = sum((_money(row.gross_profit) for row in daily_rows), Decimal("0"))
+    gross_loss = sum((_money(row.gross_loss) for row in daily_rows), Decimal("0"))
+    best_trade = max(_money(row.best) for row in daily_rows)
+    worst_trade = min(_money(row.worst) for row in daily_rows)
 
     equity_curve: list[dict[str, str]] = []
     current_cum_pnl = Decimal("0")
@@ -217,16 +216,16 @@ def get_trade_stats(
         "trades_count": trades_count,
         "wins": wins,
         "losses": losses,
-        "breakeven": int(aggregate.breakeven or 0),
-        "net_pnl": _format_money(aggregate.net_pnl),
+        "breakeven": breakeven,
+        "net_pnl": _format_money(net_pnl),
         "gross_profit": _format_money(gross_profit),
         "gross_loss": _format_money(gross_loss),
         "win_rate": round(wins / trades_count, 4),
         "profit_factor": round(float(gross_profit / gross_loss), 4) if gross_loss else None,
         "avg_win": _format_money(gross_profit / wins) if wins else None,
         "avg_loss": _format_money(-gross_loss / losses) if losses else None,
-        "best_trade": _format_money(aggregate.best),
-        "worst_trade": _format_money(aggregate.worst),
+        "best_trade": _format_money(best_trade),
+        "worst_trade": _format_money(worst_trade),
         "max_drawdown": _format_money(max_drawdown),
         "equity_curve": equity_curve,
     }
