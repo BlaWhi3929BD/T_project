@@ -335,11 +335,14 @@ minikube tunnel
    ```
 3. Укажите этот тег через Kustomize перед развёртыванием:
    ```bash
-   sed -i "s/newTag: latest/newTag: $TAG/g" k8s/kustomization.yaml
+   sed -i -E "s/(newTag: ).*/\1$TAG/" k8s/kustomization.yaml
    ```
+   Команда безопасна при повторном запуске: она заменяет текущее значение
+   `newTag`, независимо от того, было ли там `latest` или предыдущий SHA. Для
+   fish используйте тот же вызов после `set TAG (git rev-parse --short HEAD)`.
    В PowerShell используйте:
    ```powershell
-   (Get-Content k8s/kustomization.yaml) -replace 'newTag: latest', "newTag: $env:TAG" |
+   (Get-Content k8s/kustomization.yaml) -replace '(newTag: ).*', ('$1' + $env:TAG) |
      Set-Content k8s/kustomization.yaml
    ```
 4. Разверните ресурсы через **Kustomize**:
