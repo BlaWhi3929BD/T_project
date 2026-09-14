@@ -126,3 +126,18 @@ Deployment использует `IfNotPresent`. Нужно гарантиров�
 локального образа при `imagePullPolicy: IfNotPresent`.
 Проверил так: README содержит повторяемую Bash/fish и PowerShell команды, а CI
 отвергает отрендерированные манифесты с тегом `latest`.
+
+## Решение: Kustomize overlays для окружений
+
+Контекст: Локальный minikube и production требуют разных масштабов backend, но
+должны использовать один набор базовых ресурсов.
+Варианты: Дублировать манифесты, Helm values, Kustomize base с overlays.
+Выбрал: Kustomize base с `local` и `production` overlays.
+Почему: Общая конфигурация ресурсов хранится в одном месте, а окружения
+переопределяют только image tags и параметры deployment. Local overlay
+сохраняет одну реплику для minikube, production использует две реплики
+backend и `PodDisruptionBudget` с `maxUnavailable: 0`.
+Проверил так: `kubectl kustomize k8s/` и
+`kubectl kustomize k8s/overlays/production/` успешно рендерят ресурсы;
+production-вывод содержит две реплики и PDB, а root-путь сохраняет
+совместимую команду `kubectl apply -k k8s/`.

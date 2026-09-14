@@ -232,6 +232,9 @@ jobs:
       - name: Render Kubernetes manifests
         run: kubectl kustomize k8s/ > /tmp/trades-dashboard-manifests.yaml
 
+      - name: Render production overlay
+        run: kubectl kustomize k8s/overlays/production/ > /tmp/trades-dashboard-production.yaml
+
       - name: Check rendered resources
         run: |
           grep -q 'kind: StatefulSet' /tmp/trades-dashboard-manifests.yaml
@@ -239,4 +242,7 @@ jobs:
           grep -q 'startupProbe:' /tmp/trades-dashboard-manifests.yaml
           ! grep -Eq 'image: trades-(backend|frontend):latest([[:space:]]|$)' /tmp/trades-dashboard-manifests.yaml
           ! grep -q '^kind: Job$' /tmp/trades-dashboard-manifests.yaml
+          grep -q 'kind: PodDisruptionBudget' /tmp/trades-dashboard-production.yaml
+          grep -q 'replicas: 2' /tmp/trades-dashboard-production.yaml
+          ! grep -Eq 'image: trades-(backend|frontend):latest([[:space:]]|$)' /tmp/trades-dashboard-production.yaml
           ! grep -q 'POSTGRES_PASSWORD: "123"' /tmp/trades-dashboard-manifests.yaml

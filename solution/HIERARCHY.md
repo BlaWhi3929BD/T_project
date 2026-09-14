@@ -6,21 +6,17 @@
 
 ```text
 /
-├── docker-compose.yml          # Оркестрация сервисов (PostgreSQL, Backend, Frontend, Seed Job)
+├── docker-compose.yml          # Оркестрация сервисов (PostgreSQL, Backend, Frontend)
 ├── .env.example                # Плейсхолдеры секретов и переменных окружения
 ├── requirements.txt            # Зависимости Python в корне
 ├── README.md                   # Руководство по запуску и деплою
 │
 ├── k8s/                        # Манифесты Kubernetes (Kustomize)
-│   ├── namespace.yaml          # Изолированный namespace trades-dashboard
-│   ├── postgres-secret.yaml    # Секрет с учетными данными БД
-│   ├── postgres.yaml           # StatefulSet и headless Service для PostgreSQL
-│   ├── configmap.yaml          # ConfigMap с несекретными настройками
-│   ├── backend.yaml            # Deployment и Service бэкенда с securityContext
-│   ├── frontend.yaml           # Deployment и Service фронтенда (Nginx)
-│   ├── db-seed-job.yaml        # Job однократного импорта данных из CSV
-│   ├── ingress.yaml            # Ingress правила (trades.local)
-│   └── kustomization.yaml      # Конфигурация Kustomize
+│   ├── base/                   # Общие namespace, Services, Deployments и Ingress
+│   ├── overlays/local/         # Minikube: одна реплика и локальные image tags
+│   ├── overlays/production/    # Production: две backend-реплики и PDB
+│   ├── postgres-secret.yaml    # Справочный шаблон Secret, не подключён в base
+│   └── kustomization.yaml      # Совместимый entrypoint на local overlay
 │
 └── solution/
     ├── backend/                # Серверная часть (FastAPI)

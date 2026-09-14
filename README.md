@@ -333,17 +333,17 @@ minikube tunnel
    minikube image load "trades-backend:$env:TAG"
    minikube image load "trades-frontend:$env:TAG"
    ```
-3. Укажите этот тег через Kustomize перед развёртыванием:
+3. Укажите этот тег в local overlay перед развёртыванием:
    ```bash
-   sed -i -E "s/(newTag: ).*/\1$TAG/" k8s/kustomization.yaml
+   sed -i -E "s/(newTag: ).*/\1$TAG/" k8s/overlays/local/kustomization.yaml
    ```
    Команда безопасна при повторном запуске: она заменяет текущее значение
    `newTag`, независимо от того, было ли там `latest` или предыдущий SHA. Для
    fish используйте тот же вызов после `set TAG (git rev-parse --short HEAD)`.
    В PowerShell используйте:
    ```powershell
-   (Get-Content k8s/kustomization.yaml) -replace '(newTag: ).*', ('$1' + $env:TAG) |
-     Set-Content k8s/kustomization.yaml
+   (Get-Content k8s/overlays/local/kustomization.yaml) -replace '(newTag: ).*', ('$1' + $env:TAG) |
+     Set-Content k8s/overlays/local/kustomization.yaml
    ```
 4. Разверните ресурсы через **Kustomize**:
    ```bash
@@ -356,6 +356,18 @@ minikube tunnel
    генерации и загрузки данных Kubernetes не запускает liveness-проверку и не
    перезапускает pod преждевременно. После запуска Uvicorn `/health` проходит
    startup/liveness, а `/ready` подтверждает доступность PostgreSQL.
+
+Для production-режима используйте overlay с двумя репликами backend и
+`PodDisruptionBudget`:
+```bash
+kubectl apply -k k8s/overlays/production/
+```
+Перед применением production overlay замените `newTag` в
+`k8s/overlays/production/kustomization.yaml` на tag собранных образов:
+```bash
+sed -i -E "s/(newTag: ).*/\1$TAG/" k8s/overlays/production/kustomization.yaml
+```
+Local overlay остаётся вариантом по умолчанию для minikube и одной реплики.
 
 ### Проверка работоспособности в кластере
 ```bash
