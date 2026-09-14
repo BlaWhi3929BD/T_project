@@ -101,7 +101,7 @@ def get_filter_options(db: Session) -> tuple[list[str], list[str]]:
 
 def _day_expression(db: Session) -> Any:
     if db.bind is not None and db.bind.dialect.name == "postgresql":
-        return literal_column("(closed_at AT TIME ZONE 'Asia/Almaty')::date")
+        return literal_column("((closed_at AT TIME ZONE 'UTC') + INTERVAL '5 hours')::date")
     return func.date(Trade.closed_at, "+5 hours")
 
 

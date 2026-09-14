@@ -1,6 +1,7 @@
 import os
 import sys
 from decimal import Decimal
+from pathlib import Path
 
 import pytest
 from fastapi.testclient import TestClient
@@ -10,13 +11,22 @@ from sqlalchemy.orm import sessionmaker
 # Добавляем путь к корню проекта
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
 
-from app.database import Base, get_db
-from app.main import app
-from scripts.seed_db import seed_database
+# The application engine and the test session must target the same backend.
+TEST_DATABASE_URL = os.getenv("DATABASE_URL", "sqlite:///./test.db")
+os.environ.setdefault("DATABASE_URL", TEST_DATABASE_URL)
+os.environ.setdefault(
+    "CSV_PATH",
+    str(Path(__file__).resolve().parents[3] / "task" / "data" / "trades.csv"),
+)
 
-# Настройка тестовой БД
-SQLALCHEMY_DATABASE_URL = "sqlite:///./test.db"
-test_engine = create_engine(SQLALCHEMY_DATABASE_URL, connect_args={"check_same_thread": False})
+from app.database import Base, get_db  # noqa: E402
+from app.main import app  # noqa: E402
+from scripts.seed_db import seed_database  # noqa: E402
+
+engine_kwargs = (
+    {"connect_args": {"check_same_thread": False}} if TEST_DATABASE_URL.startswith("sqlite") else {}
+)
+test_engine = create_engine(TEST_DATABASE_URL, **engine_kwargs)
 TestingSessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=test_engine)
 
 
