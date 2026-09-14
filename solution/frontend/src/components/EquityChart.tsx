@@ -14,6 +14,7 @@ import {
   ResponsiveContainer
 } from 'recharts';
 import { EquityCurvePoint } from '../types/api';
+import { formatMoney, parseMoney } from '../utils/formatMoney';
 
 interface EquityChartProps {
   data: EquityCurvePoint[];
@@ -26,8 +27,8 @@ export const EquityChart: React.FC<EquityChartProps> = ({ data }) => {
   // Преобразуем строковые значения PnL в числа для графика
   const chartData = data.map(point => ({
     ...point,
-    cumPnlNum: parseFloat(point.cum_pnl),
-    dayPnlNum: parseFloat(point.day_pnl),
+    cumPnlNum: parseMoney(point.cum_pnl),
+    dayPnlNum: parseMoney(point.day_pnl),
   }));
 
   return (
@@ -56,7 +57,7 @@ export const EquityChart: React.FC<EquityChartProps> = ({ data }) => {
             tickFormatter={(value) => `${value}`}
           />
           <Tooltip 
-            formatter={(value: number) => [`${value.toFixed(2)} USDT`, 'Cumulative PnL']}
+            formatter={(value: number) => [`${formatMoney(value)} USDT`, 'Cumulative PnL']}
             labelStyle={{ fontWeight: 'bold' }}
           />
           <Area 

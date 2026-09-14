@@ -5,6 +5,7 @@
 
 import React from 'react';
 import { StatsResponse } from '../types/api';
+import { formatMoney, parseMoney } from '../utils/formatMoney';
 
 interface MetricsProps {
   stats: StatsResponse | null;
@@ -17,7 +18,7 @@ interface MetricsProps {
 export const Metrics: React.FC<MetricsProps> = ({ stats }) => {
   if (!stats) return <div className="metrics-grid">Загрузка метрик...</div>;
 
-  const netPnlNum = parseFloat(stats.net_pnl);
+  const netPnlNum = parseMoney(stats.net_pnl);
   const pnlClass = netPnlNum > 0 ? 'text-success' : netPnlNum < 0 ? 'text-danger' : '';
 
   return (
@@ -25,7 +26,7 @@ export const Metrics: React.FC<MetricsProps> = ({ stats }) => {
       <div className="metric-card">
         <div className="metric-label">Net PnL</div>
         <div className={`metric-value ${pnlClass}`}>
-          {stats.net_pnl} USDT
+          {formatMoney(stats.net_pnl)} USDT
         </div>
       </div>
 
@@ -46,7 +47,7 @@ export const Metrics: React.FC<MetricsProps> = ({ stats }) => {
       <div className="metric-card">
         <div className="metric-label">Max Drawdown</div>
         <div className="metric-value text-danger">
-          {stats.max_drawdown} USDT
+          {formatMoney(stats.max_drawdown)} USDT
         </div>
       </div>
 

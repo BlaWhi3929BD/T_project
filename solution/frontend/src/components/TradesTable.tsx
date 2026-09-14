@@ -5,6 +5,7 @@
 
 import React from 'react';
 import { Trade, TradeListResponse, DashboardFilters } from '../types/api';
+import { formatMoney, parseMoney } from '../utils/formatMoney';
 
 interface TradesTableProps {
   data: TradeListResponse | null;
@@ -66,10 +67,10 @@ export const TradesTable: React.FC<TradesTableProps> = ({ data, filters, onFilte
                 </td>
                 <td>{new Date(trade.closed_at).toLocaleString()}</td>
                 <td>{trade.qty}</td>
-                <td>{trade.entry_price}</td>
-                <td>{trade.exit_price}</td>
-                <td className={parseFloat(trade.pnl) >= 0 ? 'text-success' : 'text-danger'}>
-                  {trade.pnl}
+                <td>{formatMoney(trade.entry_price)}</td>
+                <td>{formatMoney(trade.exit_price)}</td>
+                <td className={parseMoney(trade.pnl) >= 0 ? 'text-success' : 'text-danger'}>
+                  {formatMoney(trade.pnl)}
                 </td>
               </tr>
             ))}
