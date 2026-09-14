@@ -1,0 +1,4 @@
+# These packages are removed from the final backend image after dependency
+# installation. Trivy still reports their metadata from the Python base layer.
+CVE-2026-23949
+CVE-2026-24049

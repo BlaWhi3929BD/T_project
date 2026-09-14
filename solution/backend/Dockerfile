@@ -1,4 +1,4 @@
-FROM python:3.11-slim AS runtime
+FROM python:3.11-slim-bookworm AS runtime
 
 ENV PYTHONUNBUFFERED=1 \
     PYTHONDONTWRITEBYTECODE=1 \
@@ -6,7 +6,11 @@ ENV PYTHONUNBUFFERED=1 \
 
 WORKDIR /app
 
+# curl is installed from the pinned Debian base image; the package version
+# varies between security rebuilds of that image.
+# hadolint ignore=DL3008
 RUN apt-get update \
+    && apt-get upgrade -y \
     && apt-get install -y --no-install-recommends curl \
     && rm -rf /var/lib/apt/lists/*
 
@@ -17,6 +21,8 @@ RUN groupadd --gid 10001 appgroup \
     && chown -R appuser:appgroup /app/task
 
 COPY solution/backend/requirements.txt ./requirements.txt
+# requirements.txt pins every runtime dependency.
+# hadolint ignore=DL3013
 RUN pip install --no-cache-dir -r requirements.txt
 
 COPY solution/backend/app ./app
@@ -29,12 +35,14 @@ ENTRYPOINT ["/app/entrypoint.sh"]
 FROM runtime AS test
 
 COPY solution/backend/tests ./tests
-RUN pip install --no-cache-dir pytest httpx
+COPY solution/backend/test-requirements.txt ./test-requirements.txt
+RUN pip install --no-cache-dir -r test-requirements.txt
 USER appuser
 CMD ["pytest", "-q", "tests"]
 
 FROM runtime AS final
 
+RUN pip uninstall --yes pip wheel jaraco.context
 USER appuser
 
 EXPOSE 8000

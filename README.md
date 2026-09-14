@@ -198,6 +198,31 @@ docker compose --profile test run --rm backend-test
 docker compose down -v
 ```
 
+### Проверки безопасности
+
+CI выполняет следующие проверки безопасности:
+
+- `hadolint` проверяет оба Dockerfile;
+- `pip-audit` проверяет Python-зависимости;
+- `npm audit` проверяет frontend-зависимости;
+- `trivy` сканирует репозиторий, Docker-образы, секреты и misconfiguration;
+- `docker history` проверяет, что credentials не попали в слои образов.
+
+Сканирование уязвимостей завершается ошибкой при обнаружении исправляемых
+уязвимостей уровня `HIGH` или `CRITICAL`. Для локального запуска после сборки
+образов установите [Trivy](https://aquasecurity.github.io/trivy/) и выполните:
+
+```bash
+trivy image --scanners vuln,secret,misconfig --severity HIGH,CRITICAL \
+  --ignore-unfixed --exit-code 1 trades-backend:$(git rev-parse --short HEAD)
+trivy image --scanners vuln,secret,misconfig --severity HIGH,CRITICAL \
+  --ignore-unfixed --exit-code 1 trades-frontend:$(git rev-parse --short HEAD)
+```
+
+Рабочие credentials не должны храниться в репозитории, `.env` или Dockerfile.
+Для GitHub-репозитория дополнительно включите **Secret scanning** и
+**Push protection** в настройках `Settings → Code security and analysis`.
+
 ---
 ## Тестирование локально (без Docker)
 
