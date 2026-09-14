@@ -136,6 +136,93 @@ jobs:
           test "$backend_size" -le 524288000
           test "$frontend_size" -le 62914560
 
+  compose-integration:
+    runs-on: ubuntu-latest
+    needs:
+      - backend-sqlite
+      - backend-postgres
+      - frontend
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Create CI Compose environment
+        run: |
+          cat > .env.ci <<'EOF'
+          POSTGRES_DB=trades_ci
+          POSTGRES_USER=trades_ci
+          POSTGRES_PASSWORD=ci-only-password
+          DATABASE_URL=******postgres:5432/trades_ci
+          EOF
+
+      - name: Validate Compose configuration
+        run: docker compose --env-file .env.ci config --quiet
+
+      - name: Start the Compose stack
+        run: docker compose --env-file .env.ci up --build -d
+
+      - name: Wait for healthy runtime services
+        run: |
+          set -eu
+          for attempt in $(seq 1 120); do
+            postgres_health=$(docker inspect --format '{{if .State.Health}}{{.State.Health.Status}}{{else}}missing{{end}}' trades-postgres 2>/dev/null || true)
+            backend_health=$(docker inspect --format '{{if .State.Health}}{{.State.Health.Status}}{{else}}missing{{end}}' trades-backend 2>/dev/null || true)
+            frontend_health=$(docker inspect --format '{{if .State.Health}}{{.State.Health.Status}}{{else}}missing{{end}}' trades-frontend 2>/dev/null || true)
+            if [ "$postgres_health" = healthy ] && [ "$backend_health" = healthy ] && [ "$frontend_health" = healthy ]; then
+              exit 0
+            fi
+            sleep 5
+          done
+          docker compose --env-file .env.ci ps
+          docker compose --env-file .env.ci logs --no-color
+          exit 1
+
+      - name: Verify dashboard, API, and runtime isolation
+        run: |
+          set -eu
+          curl --fail --silent http://127.0.0.1:8080/ | grep -q '<div id="root">'
+          curl --fail --silent http://127.0.0.1:8080/health | grep -q '"status":"ok"'
+          curl --fail --silent http://127.0.0.1:8080/ready | grep -q '"status":"ready"'
+          curl --fail --silent http://127.0.0.1:8080/api/stats > /tmp/stats.json
+          python - <<'PY'
+          import json
+          from pathlib import Path
+
+          stats = json.loads(Path("/tmp/stats.json").read_text())
+          assert stats["trades_count"] == 100000
+          assert stats["net_pnl"] == "20373.96"
+          PY
+          ! curl --silent --connect-timeout 2 http://127.0.0.1:8000/
+          test "$(docker compose --env-file .env.ci exec -T backend id -u)" != "0"
+
+      - name: Verify repeat startup preserves the dataset
+        run: |
+          set -eu
+          docker compose --env-file .env.ci down
+          docker compose --env-file .env.ci up -d
+          for attempt in $(seq 1 120); do
+            backend_health=$(docker inspect --format '{{if .State.Health}}{{.State.Health.Status}}{{else}}missing{{end}}' trades-backend 2>/dev/null || true)
+            frontend_health=$(docker inspect --format '{{if .State.Health}}{{.State.Health.Status}}{{else}}missing{{end}}' trades-frontend 2>/dev/null || true)
+            if [ "$backend_health" = healthy ] && [ "$frontend_health" = healthy ]; then
+              break
+            fi
+            sleep 5
+          done
+          curl --fail --silent http://127.0.0.1:8080/api/stats > /tmp/repeat-stats.json
+          python - <<'PY'
+          import json
+          from pathlib import Path
+
+          stats = json.loads(Path("/tmp/repeat-stats.json").read_text())
+          assert stats["trades_count"] == 100000
+          assert stats["net_pnl"] == "20373.96"
+          PY
+          docker compose --env-file .env.ci logs --no-color backend | grep -q "Skipping seed"
+
+      - name: Tear down Compose stack
+        if: always()
+        run: docker compose --env-file .env.ci down -v --remove-orphans
+
   manifests:
     runs-on: ubuntu-latest
     steps:
