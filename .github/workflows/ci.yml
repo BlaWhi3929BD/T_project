@@ -237,7 +237,7 @@ jobs:
           POSTGRES_DB=trades_ci
           POSTGRES_USER=trades_ci
           POSTGRES_PASSWORD=ci-only-password
-          DATABASE_URL=******postgres:5432/trades_ci
+          DATABASE_URL=postgresql://trades_ci:ci-only-password@postgres:5432/trades_ci
           EOF
 
       - name: Validate Compose configuration
