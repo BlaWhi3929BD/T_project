@@ -179,13 +179,14 @@ jobs:
           npm audit --audit-level=high
 
       - name: Scan repository for vulnerabilities, secrets, and misconfiguration
-        uses: aquasecurity/trivy-action@0.28.0
+        uses: aquasecurity/trivy-action@v0.36.0
         with:
           scan-type: fs
           scan-ref: .
           scanners: vuln,secret,misconfig
           severity: HIGH,CRITICAL
           ignore-unfixed: true
+          ignorefile: .trivyignore
           exit-code: "1"
 
       - name: Build images for vulnerability scanning
@@ -194,21 +195,23 @@ jobs:
           docker build --tag trades-frontend:${{ github.sha }} -f solution/frontend/Dockerfile solution/frontend
 
       - name: Scan backend image
-        uses: aquasecurity/trivy-action@0.28.0
+        uses: aquasecurity/trivy-action@v0.36.0
         with:
           image-ref: trades-backend:${{ github.sha }}
           scanners: vuln,secret,misconfig
           severity: HIGH,CRITICAL
           ignore-unfixed: true
+          ignorefile: .trivyignore
           exit-code: "1"
 
       - name: Scan frontend image
-        uses: aquasecurity/trivy-action@0.28.0
+        uses: aquasecurity/trivy-action@v0.36.0
         with:
           image-ref: trades-frontend:${{ github.sha }}
           scanners: vuln,secret,misconfig
           severity: HIGH,CRITICAL
           ignore-unfixed: true
+          ignorefile: .trivyignore
           exit-code: "1"
 
       - name: Check Docker history for credentials
@@ -241,7 +244,15 @@ jobs:
         run: docker compose --env-file .env.ci config --quiet
 
       - name: Start the Compose stack
-        run: docker compose --env-file .env.ci up --build -d
+        run: |
+          set +e
+          docker compose --env-file .env.ci up --build -d
+          status=$?
+          if [ "$status" -ne 0 ]; then
+            docker compose --env-file .env.ci ps
+            docker compose --env-file .env.ci logs --no-color
+            exit "$status"
+          fi
 
       - name: Wait for healthy runtime services
         run: |
